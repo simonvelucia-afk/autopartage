@@ -684,8 +684,9 @@ async function bootstrap(){
   await Promise.all([loadProfile(),loadVehicles(),loadRoutes(),loadTarif()]);
 }
 async function loadProfile(){
-  const {data}=await sb.from('profiles').select('*').eq('id',CU.id).single();
-  CP=data;
+  const {data,error}=await sb.from('profiles').select('*').eq('id',CU.id).single();
+  if(data) CP=data;
+  console.log('Profil chargé:', CP);
 }
 async function loadVehicles(){
   const {data}=await sb.from('vehicles').select('*').order('name');
