@@ -3,7 +3,7 @@
 //  Tableau de bord Supabase → Settings → API
 // ═══════════════════════════════════════════════════════════════
 
-const SUPABASE_URL     = "VOTRE_URL_SUPABASE";
+const SUPABASE_URL     = "https://github.com/simonvelucia-afk/autopartage.git";
 // ex: "https://abcdefghijkl.supabase.co"
 
 const SUPABASE_ANON_KEY = "VOTRE_CLE_ANON";
