@@ -254,6 +254,15 @@ tr:hover td{background:rgba(0,0,0,.015)}
       </div>
       <div id="loginErr" style="color:#e87f73;font-size:.8rem;margin-bottom:.65rem;display:none"></div>
       <button class="btn btn-amber btn-full" onclick="doLogin()" id="loginBtn">Se connecter</button>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-top:.85rem">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+        <span style="color:rgba(255,255,255,.3);font-size:.72rem">ou</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+      </div>
+      <button class="btn btn-full" id="demoBtn" onclick="doDemo()" style="margin-top:.85rem;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.75);font-family:'Instrument Sans',sans-serif;font-size:.85rem;font-weight:500;justify-content:center;gap:.5rem">
+        🎮 Faire un essai
+      </button>
+      <p style="color:rgba(255,255,255,.22);font-size:.7rem;margin-top:.5rem;text-align:center">Mode exploration · aucune donnée réelle modifiée</p>
     </div>
     <p style="color:rgba(255,255,255,.22);font-size:.73rem;margin-top:1.2rem;text-align:center">Accès sur invitation de l'administrateur uniquement.</p>
   </div>
@@ -262,6 +271,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
 <!-- APP -->
 <div id="appShell" style="display:none">
+  <!-- Bandeau mode démo -->
+  <div id="demoBanner" style="display:none;background:linear-gradient(90deg,#c17f3e,#a96e32);color:white;text-align:center;padding:.45rem 1rem;font-size:.8rem;font-weight:600;letter-spacing:.03em;position:sticky;top:60px;z-index:99">
+    🎮 MODE ESSAI — Vous explorez la plateforme en tant que résident virtuel · <span style="opacity:.8;font-weight:400">Les données peuvent être réinitialisées à tout moment</span>
+  </div>
   <div class="topbar">
     <div class="logo"><div class="logo-dot"></div>AutoPartage</div>
     <nav class="nav" id="mainNav">
@@ -478,12 +491,13 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
     <!-- Tarifs -->
     <div class="card mb-3">
-      <div class="card-label">Tarification covoiturage</div>
+      <div class="card-label">Tarification globale (valeur par défaut)</div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem">Chaque véhicule a son propre tarif configurable dans <strong>🚗 Véhicules → Modifier</strong>. Ces valeurs servent uniquement de référence globale.</p>
       <div class="grid-2" style="margin-bottom:.75rem">
         <div class="form-group" style="margin:0"><label class="lbl">Prix par km ($ CA)</label><input type="number" id="adminPriceKm" class="inp" step="0.001" min="0"></div>
         <div class="form-group" style="margin:0"><label class="lbl">Prix par minute ($ CA)</label><input type="number" id="adminPriceMin" class="inp" step="0.001" min="0"></div>
       </div>
-      <button class="btn btn-amber" onclick="saveTarifs()">Enregistrer les tarifs</button>
+      <button class="btn btn-amber" onclick="saveTarifs()">Enregistrer</button>
       <span id="tarifSaved" style="color:var(--accent);font-size:.8rem;margin-left:.75rem;display:none">✓ Enregistré</span>
     </div>
 
@@ -530,6 +544,21 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="form-group"><label class="lbl">Type</label><select id="vType" class="inp"><option value="🚗">🚗 Berline</option><option value="🚐">🚐 Monospace</option><option value="🚙">🚙 SUV</option><option value="⚡">⚡ Électrique</option><option value="🚚">🚚 Utilitaire</option></select></div>
     <div class="form-group"><label class="lbl">Nombre de places passagers</label><input type="number" id="vSeats" class="inp" value="4" min="1" max="9"></div>
     <div class="form-group"><label class="lbl">Informations</label><input type="text" id="vInfo" class="inp" placeholder="GPS, boîte auto…"></div>
+    <div class="divider"></div>
+    <div class="card-label" style="margin-bottom:.75rem">Tarification covoiturage</div>
+    <div class="grid-2">
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Prix par km ($ CA)</label>
+        <input type="number" id="vPriceKm" class="inp" value="0.18" step="0.001" min="0">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Prix par minute ($ CA)</label>
+        <input type="number" id="vPriceMin" class="inp" value="0.05" step="0.001" min="0">
+      </div>
+    </div>
+    <div id="vCostPreview" style="margin-top:.75rem;background:var(--bg2);border-radius:8px;padding:.7rem 1rem;font-size:.82rem;color:var(--muted)">
+      Exemple : trajet de <strong>10 km / 20 min</strong> → <strong id="vCostExample">—</strong>
+    </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('vehicleModal')">Annuler</button><button class="btn btn-green" onclick="saveVehicle()">Enregistrer</button></div>
   </div>
 </div>
@@ -667,6 +696,7 @@ function showPage2(name){
 let CU=null, CP=null, vehicles=[], routes=[], tarif={price_per_km:.18,price_per_min:.05};
 let calDate=new Date(), selectedDate=null, selectedSlot=null;
 let tripRouteType='preset', tripDistKm=null, tripDistMin=null, tripVehicleSeats=4;
+let demoMode=false;
 
 // ─── INIT ───────────────────────────────────────────────────
 async function init(){
@@ -684,14 +714,8 @@ async function bootstrap(){
   await Promise.all([loadProfile(),loadVehicles(),loadRoutes(),loadTarif()]);
 }
 async function loadProfile(){
-  const {data,error}=await sb.from('profiles').select('*').eq('id',CU.id).single();
-  if(error) console.error('Erreur profil:', error);
-  if(data){
-    CP=data;
-    CP.email=CU.email;
-  } else {
-    CP={id:CU.id, email:CU.email, full_name:'', apt:'', role:'resident', balance:0, avatar:'🧑'};
-  }
+  const {data}=await sb.from('profiles').select('*').eq('id',CU.id).single();
+  CP=data;
 }
 async function loadVehicles(){
   const {data}=await sb.from('vehicles').select('*').order('name');
@@ -714,6 +738,11 @@ function showApp(){
   selectedAvatar=CP?.avatar||'🧑';
   updateAvatarEverywhere();
   updateBalanceChip();
+  // Bandeau démo
+  if(demoMode||CP?.email==='demo.resident@autopartage.local'){
+    document.getElementById('demoBanner').style.display='block';
+    demoMode=true;
+  }
   if(CP?.role==='admin'){
     document.getElementById('navUsers').style.display='';
     document.getElementById('navAdmin').style.display='';
@@ -749,6 +778,25 @@ async function doLogin(){
   btn.disabled=false;btn.textContent='Se connecter';
   if(error){showErr2('Email ou mot de passe incorrect.');}
   else err.style.display='none';
+}
+
+async function doDemo(){
+  const btn=document.getElementById('demoBtn');
+  btn.disabled=true;btn.textContent='⏳ Chargement…';
+  // Connexion avec le compte démo pré-créé
+  const {data,error}=await sb.auth.signInWithPassword({
+    email:'demo.resident@autopartage.local',
+    password:'Demo1234!'
+  });
+  if(error){
+    // Si le compte démo n'existe pas encore, afficher un message d'aide
+    btn.disabled=false;btn.innerHTML='🎮 Faire un essai';
+    showErr2('Compte démo non configuré. Voir le guide d\'installation.');
+    return;
+  }
+  btn.disabled=false;btn.innerHTML='🎮 Faire un essai';
+  // Afficher un bandeau "mode démo" dans l'app
+  demoMode=true;
 }
 function showErr2(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
 async function doLogout(){await sb.auth.signOut();}
@@ -1161,8 +1209,8 @@ async function adminValidatePayment(tripPassengerId){
 async function openTripModal(){
   tripDistKm=null;tripDistMin=null;
   document.getElementById('routeSelect').innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}">${r.label}</option>`).join('');
-  document.getElementById('tripVehicle').innerHTML=vehicles.filter(v=>v.status==='disponible').map(v=>`<option value="${v.id}" data-seats="${v.seats}">${v.type} ${v.name} (${v.seats} places)</option>`).join('');
-  tripVehicleSeats=parseInt(document.getElementById('tripVehicle').selectedOptions[0]?.dataset.seats)||4;
+  document.getElementById('tripVehicle').innerHTML=vehicles.filter(v=>v.status==='disponible').map(v=>`<option value="${v.id}" data-seats="${v.seats}">${v.type} ${v.name} (${v.seats} places) · ${fmt(v.price_per_km||0.18)}$/km</option>`).join('');
+  onTripVehicleChange();
   const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
   document.getElementById('tripDate').value=ds(tomorrow);
   document.getElementById('tripTime').value='08:00';
@@ -1193,7 +1241,15 @@ function onRouteSelect(){
 }
 
 function onTripVehicleChange(){
-  tripVehicleSeats=parseInt(document.getElementById('tripVehicle').selectedOptions[0]?.dataset.seats)||4;
+  const sel=document.getElementById('tripVehicle').selectedOptions[0];
+  tripVehicleSeats=parseInt(sel?.dataset.seats)||4;
+  // Charger le tarif du véhicule sélectionné
+  const vid=document.getElementById('tripVehicle').value;
+  const v=vehicles.find(x=>x.id===vid);
+  if(v){
+    tarif.price_per_km=v.price_per_km||0.18;
+    tarif.price_per_min=v.price_per_min||0.05;
+  }
   updateTripPreview();
 }
 
@@ -1301,7 +1357,11 @@ async function renderVehicles(){
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:.2rem">${v.name}</div>
       <div style="background:var(--noir);color:white;display:inline-block;padding:.12rem .55rem;border-radius:4px;font-size:.73rem;font-weight:700;letter-spacing:.08em;margin-bottom:.5rem">${v.plate}</div>
       <div class="text-muted" style="font-size:.8rem;margin-bottom:.3rem">${v.info||''}</div>
-      <div class="text-muted" style="font-size:.78rem;margin-bottom:${CP?.role==='admin'?'.9rem':'0'}">🪑 ${v.seats} places passagers · ${cm[v.id]||0} réservation(s)</div>
+      <div class="text-muted" style="font-size:.78rem;margin-bottom:.3rem">🪑 ${v.seats} places passagers · ${cm[v.id]||0} réservation(s)</div>
+      <div style="display:flex;gap:.5rem;margin-bottom:${CP?.role==='admin'?'.75rem':'.1rem'}">
+        <span class="trip-chip">💲 ${fmt(v.price_per_km||0.18)}/km</span>
+        <span class="trip-chip">⏱ ${fmt(v.price_per_min||0.05)}/min</span>
+      </div>
       ${CP?.role==='admin'?`<div style="display:flex;gap:.45rem;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="openVehicleModal('${v.id}')">Modifier</button>
         <button class="btn ${v.status==='maintenance'?'btn-green':'btn-ghost'} btn-sm" onclick="toggleMaintenance('${v.id}','${v.status}')">${v.status==='maintenance'?'Remettre en service':'Maintenance'}</button>
@@ -1314,15 +1374,35 @@ function openVehicleModal(id){
   editVid=id||null;
   const v=id?vehicles.find(x=>x.id===id):null;
   document.getElementById('vehicleModalTitle').textContent=v?'Modifier le véhicule':'Ajouter un véhicule';
-  document.getElementById('vName').value=v?.name||'';document.getElementById('vPlate').value=v?.plate||'';
-  document.getElementById('vType').value=v?.type||'🚗';document.getElementById('vSeats').value=v?.seats||4;
+  document.getElementById('vName').value=v?.name||'';
+  document.getElementById('vPlate').value=v?.plate||'';
+  document.getElementById('vType').value=v?.type||'🚗';
+  document.getElementById('vSeats').value=v?.seats||4;
   document.getElementById('vInfo').value=v?.info||'';
+  document.getElementById('vPriceKm').value=v?.price_per_km||0.18;
+  document.getElementById('vPriceMin').value=v?.price_per_min||0.05;
+  updateVCostPreview();
+  document.getElementById('vPriceKm').oninput=updateVCostPreview;
+  document.getElementById('vPriceMin').oninput=updateVCostPreview;
   document.getElementById('vehicleModal').classList.add('open');
+}
+function updateVCostPreview(){
+  const km=parseFloat(document.getElementById('vPriceKm').value)||0;
+  const min=parseFloat(document.getElementById('vPriceMin').value)||0;
+  const ex=Math.round((km*10+min*20)*100)/100;
+  document.getElementById('vCostExample').textContent=fmt(ex)+' $ CA';
 }
 async function saveVehicle(){
   const name=document.getElementById('vName').value.trim(),plate=document.getElementById('vPlate').value.trim().toUpperCase();
   if(!name||!plate){showToast('Champs requis',true);return;}
-  const d={name,plate,type:document.getElementById('vType').value,seats:parseInt(document.getElementById('vSeats').value)||4,info:document.getElementById('vInfo').value.trim()};
+  const d={
+    name,plate,
+    type:document.getElementById('vType').value,
+    seats:parseInt(document.getElementById('vSeats').value)||4,
+    info:document.getElementById('vInfo').value.trim(),
+    price_per_km:parseFloat(document.getElementById('vPriceKm').value)||0.18,
+    price_per_min:parseFloat(document.getElementById('vPriceMin').value)||0.05
+  };
   const {error}=editVid?await sb.from('vehicles').update(d).eq('id',editVid):await sb.from('vehicles').insert(d);
   if(error){showToast('Erreur',true);return;}
   closeModal('vehicleModal');showToast(editVid?'Véhicule modifié':'Véhicule ajouté');
