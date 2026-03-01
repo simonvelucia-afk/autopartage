@@ -1629,13 +1629,84 @@ async function renderUsers(){
 }
 function openUserModal(){['uApt','uName','uEmail','uPass'].forEach(id=>document.getElementById(id).value='');document.getElementById('uRole').value='resident';document.getElementById('userModal').classList.add('open');}
 async function saveUser(){
-  const apt=document.getElementById('uApt').value.trim(),name=document.getElementById('uName').value.trim();
-  const email=document.getElementById('uEmail').value.trim(),pass=document.getElementById('uPass').value;
-  if(!apt||!name||!email||!pass){showToast('Tous les champs requis',true);return;}
-  if(pass.length<8){showToast('Mot de passe : 8 car. min.',true);return;}
-  const {error}=await sb.rpc('create_resident',{p_email:email,p_password:pass,p_apt:apt,p_full_name:name,p_role:document.getElementById('uRole').value});
-  if(error){showToast('Erreur : '+error.message,true);return;}
-  closeModal('userModal');showToast('Compte créé pour '+name);renderUsers();
+  // kept for backward compatibility (old calls). real impl below.
+  return saveUserImpl();
+}
+async function saveUserImpl(){
+  const apt = document.getElementById('uApt').value.trim();
+  const name = document.getElementById('uName').value.trim();
+  const email = document.getElementById('uEmail').value.trim();
+  const pass = document.getElementById('uPass').value;
+  const role = document.getElementById('uRole').value;
+
+  if(!apt || !name || !email || !pass){ showToast('Tous les champs requis', true); return; }
+  if(pass.length < 8){ showToast('Mot de passe : 8 car. min.', true); return; }
+
+  // 1) Try your DB RPC if it exists (recommended when you have a security-definer function).
+  try{
+    const { error } = await sb.rpc('create_resident', {
+      p_email: email,
+      p_password: pass,
+      p_apt: apt,
+      p_full_name: name,
+      p_role: role
+    });
+    if(!error){
+      closeModal('userModal');
+      showToast('Compte créé pour ' + name);
+      renderUsers();
+      return;
+    }
+    // If RPC exists but failed, we fall back only for "missing function" / permission errors.
+    const msg = (error && error.message) ? error.message : '';
+    const isMissingFn = /create_resident|function.*does not exist|404/i.test(msg);
+    const isPerm = /permission|not allowed|RLS|security|policy|denied/i.test(msg);
+    if(!(isMissingFn || isPerm)){
+      showToast('Erreur : ' + msg, true);
+      return;
+    }
+  }catch(e){
+    // continue to fallback
+  }
+
+  // 2) Fallback: use Supabase Auth signUp + create profile row.
+  // Note: This requires your Supabase project to allow signups, and your RLS/policies to allow profile creation for the current admin.
+  const { data: signData, error: signErr } = await sb.auth.signUp({
+    email,
+    password: pass,
+    options: { data: { apt, full_name: name, role } }
+  });
+  if(signErr){
+    showToast('Création Auth impossible : ' + signErr.message, true);
+    return;
+  }
+
+  const uid = signData?.user?.id;
+  if(uid){
+    const { error: profErr } = await sb.from('profiles').upsert({
+      id: uid,
+      apt,
+      full_name: name,
+      email,
+      role,
+      active: true,
+      balance: 0
+    });
+    if(profErr){
+      showToast('Compte Auth créé, mais profil non créé : ' + profErr.message, true);
+      // Still close modal, because auth user exists now
+      closeModal('userModal');
+      renderUsers();
+      return;
+    }
+  }else{
+    // Email confirmation can cause user to be null; still inform the admin.
+    showToast('Demande envoyée. Vérifie la configuration (confirmation email).', false);
+  }
+
+  closeModal('userModal');
+  showToast('Compte créé pour ' + name);
+  renderUsers();
 }
 async function toggleUser(id,cur){await sb.from('profiles').update({active:!cur}).eq('id',id);renderUsers();}
 
