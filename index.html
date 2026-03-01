@@ -18,7 +18,7 @@
 body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--texte);min-height:calc(var(--vh, 1vh) * 100);font-size:15px;line-height:1.5}
 
 /* TOPBAR */
-.topbar{background:var(--noir);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.topbar{background:var(--noir);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem; padding-top:env(safe-area-inset-top); height:calc(60px + env(safe-area-inset-top));position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
 .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:-.02em;color:white;display:flex;align-items:center;gap:.5rem}
 .logo-dot{width:9px;height:9px;border-radius:50%;background:var(--accent2)}
 .nav{display:flex;gap:.1rem;flex-wrap:wrap}
@@ -26,6 +26,30 @@ body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--t
 .nav button:hover{background:rgba(255,255,255,.08);color:white}
 .nav button.active{background:var(--accent);color:white}
 .topbar-right{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+
+/* BURGER (mobile) */
+.burger{display:none;align-items:center;justify-content:center;width:42px;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
+.burger:hover{background:rgba(255,255,255,.1)}
+.burger-lines{position:relative;width:18px;height:12px}
+.burger-lines span{position:absolute;left:0;right:0;height:2px;background:#fff;border-radius:999px;transition:transform .18s, top .18s, opacity .18s}
+.burger-lines span:nth-child(1){top:0}
+.burger-lines span:nth-child(2){top:5px}
+.burger-lines span:nth-child(3){top:10px}
+.burger.is-open .burger-lines span:nth-child(1){top:5px;transform:rotate(45deg)}
+.burger.is-open .burger-lines span:nth-child(2){opacity:0}
+.burger.is-open .burger-lines span:nth-child(3){top:5px;transform:rotate(-45deg)}
+
+/* Burger overlay menu */
+.burger-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);display:none;z-index:250;padding-top:calc(60px + env(safe-area-inset-top))}
+.burger-overlay.open{display:block}
+.burger-menu{background:var(--noir);color:#fff;border-top:1px solid rgba(255,255,255,.12);box-shadow:0 20px 60px rgba(0,0,0,.45);padding:.75rem .75rem calc(.9rem + env(safe-area-inset-bottom));margin:0 .75rem;border-radius:16px}
+.burger-menu .bm-title{font-family:'Syne',sans-serif;font-weight:800;letter-spacing:-.02em;font-size:1rem;margin:.25rem .25rem .5rem .25rem;opacity:.9}
+.burger-menu .bm-grid{display:grid;grid-template-columns:1fr 1fr;gap:.35rem}
+.burger-menu button{width:100%;text-align:left;border:none;border-radius:12px;padding:.7rem .75rem;background:rgba(255,255,255,.06);color:#fff;font-family:'Instrument Sans',sans-serif;font-size:.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:.5rem}
+.burger-menu button:hover{background:rgba(255,255,255,.1)}
+.burger-menu button.bm-danger{background:rgba(181,57,42,.18);border:1px solid rgba(181,57,42,.35)}
+.burger-menu button.bm-danger:hover{background:rgba(181,57,42,.28)}
+.burger-menu .bm-meta{display:flex;gap:.5rem;align-items:center;justify-content:space-between;margin:.6rem .25rem 0 .25rem;color:rgba(255,255,255,.7);font-size:.85rem}
 .user-chip{display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.1);border-radius:20px;padding:.28rem .8rem;font-size:.78rem;color:white}
 .user-chip .apt{background:var(--accent2);color:white;border-radius:10px;padding:.08rem .45rem;font-size:.7rem;font-weight:700}
 .balance-chip{background:rgba(45,90,61,.3);border:1px solid rgba(45,90,61,.4);color:#8fd4a8;border-radius:20px;padding:.28rem .75rem;font-size:.78rem;font-weight:600}
@@ -89,7 +113,7 @@ select.inp option{background:white}
 .mobile-nav button{background:none;border:none;color:rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.25rem 0;cursor:pointer;font-size:.5rem;font-family:"Instrument Sans",sans-serif;font-weight:600;letter-spacing:.01em;flex:1;min-width:0;text-transform:uppercase}
 .mobile-nav button .mn-icon{font-size:1.15rem;line-height:1}
 .mobile-nav button.active{color:var(--accent2)}
-@media(max-width:768px){.nav{display:none}.mobile-nav{display:flex}.page{padding:1rem 1rem 90px}.stat-card{padding:.75rem .9rem}.page-title{font-size:1.3rem !important}.page-sub{font-size:.8rem}.topbar{padding:0 .75rem}}
+@media(max-width:768px){.nav{display:none}.mobile-nav{display:none}.burger{display:flex}.page{padding:1rem 1rem 90px}.stat-card{padding:.75rem .9rem}.page-title{font-size:1.3rem !important}.page-sub{font-size:.8rem}.topbar{padding:0 .75rem}}
 .page.active{display:block}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:1rem;flex-wrap:wrap}
@@ -244,6 +268,12 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .seat-taken{background:rgba(181,57,42,.1);border:1.5px solid rgba(181,57,42,.25)}
 .seat-child{background:rgba(193,127,62,.1);border:1.5px solid rgba(193,127,62,.25)}
 .seat-driver{background:var(--accent);border:1.5px solid var(--accent)}
+
+@media(max-width:768px){
+  .topbar{padding-left:calc(1rem + env(safe-area-inset-left));padding-right:calc(1rem + env(safe-area-inset-right))}
+  .balance-chip{display:none}
+  .btn-logout{display:none}
+}
 </style>
 <script>
   // iOS Safari: stabilise 100vh (address bar) using CSS var --vh
@@ -327,6 +357,9 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <button data-page="admin"   id="navAdmin" style="display:none">⚙️ Admin</button>
     </nav>
     <div class="topbar-right">
+      <button class="burger" id="burgerBtn" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="burgerOverlay">
+        <div class="burger-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+      </button>
       <div class="balance-chip" id="balanceChip">0,00 $ CA</div>
       <div class="user-chip" onclick="showPage2('profile')" style="cursor:pointer" title="Mon profil">
         <span class="av-topbar" id="topbarAvatar">🧑</span>
@@ -334,6 +367,29 @@ tr:hover td{background:rgba(0,0,0,.015)}
         <span id="userName">—</span>
       </div>
       <button class="btn-logout" onclick="doLogout()">Quitter</button>
+    </div>
+  </div>
+
+
+  <!-- ── BURGER MENU (mobile) ── -->
+  <div class="burger-overlay" id="burgerOverlay" aria-hidden="true">
+    <div class="burger-menu" role="dialog" aria-modal="true" aria-label="Menu">
+      <div class="bm-title">Menu</div>
+      <div class="bm-grid">
+        <button data-bm="dashboard">📊 Bord</button>
+        <button data-bm="calendar">📅 Réserver</button>
+        <button data-bm="covoiturage">🤝 Covoiturage</button>
+        <button data-bm="vehicles">🚗 Véhicules</button>
+        <button data-bm="wallet">💳 Portefeuille</button>
+        <button data-bm="profile">😊 Profil</button>
+        <button data-bm="users" id="bmUsers" style="display:none">👥 Résidents</button>
+        <button data-bm="admin" id="bmAdmin" style="display:none">⚙️ Admin</button>
+        <button class="bm-danger" data-bm="logout">🚪 Quitter</button>
+      </div>
+      <div class="bm-meta">
+        <span id="bmApt">—</span>
+        <span id="bmName">—</span>
+      </div>
     </div>
   </div>
 
@@ -1701,6 +1757,76 @@ function showToast(msg,isErr=false){
   t.className='toast'+(isErr?' err':'');t.classList.add('show');
   clearTimeout(ttimer);ttimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
+</script>
+
+<script>
+  // Burger menu (mobile)
+  (function(){
+    const btn = document.getElementById('burgerBtn');
+    const overlay = document.getElementById('burgerOverlay');
+    const mainNavUsers = document.getElementById('navUsers');
+    const mainNavAdmin = document.getElementById('navAdmin');
+    const bmUsers = document.getElementById('bmUsers');
+    const bmAdmin = document.getElementById('bmAdmin');
+
+    function syncBurgerVisibility(){
+      // Mirror admin/users visibility from top nav (if those elements exist)
+      if(mainNavUsers && bmUsers) bmUsers.style.display = (getComputedStyle(mainNavUsers).display === 'none') ? 'none' : '';
+      if(mainNavAdmin && bmAdmin) bmAdmin.style.display = (getComputedStyle(mainNavAdmin).display === 'none') ? 'none' : '';
+      // Copy user meta
+      const apt = document.getElementById('userApt');
+      const name = document.getElementById('userName');
+      const bmApt = document.getElementById('bmApt');
+      const bmName = document.getElementById('bmName');
+      if(apt && bmApt) bmApt.textContent = apt.textContent || '—';
+      if(name && bmName) bmName.textContent = name.textContent || '—';
+    }
+
+    function openMenu(){
+      if(!overlay || !btn) return;
+      syncBurgerVisibility();
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      btn.classList.add('is-open');
+      btn.setAttribute('aria-expanded','true');
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    }
+    function closeMenu(){
+      if(!overlay || !btn) return;
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded','false');
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    function toggleMenu(){
+      if(!overlay) return;
+      overlay.classList.contains('open') ? closeMenu() : openMenu();
+    }
+
+    if(btn && overlay){
+      btn.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeMenu(); });
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeMenu(); });
+
+      overlay.querySelectorAll('[data-bm]').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const page = b.getAttribute('data-bm');
+          closeMenu();
+          if(page === 'logout') { if(typeof doLogout === 'function') doLogout(); return; }
+          if(typeof showPage2 === 'function') showPage2(page);
+        });
+      });
+
+      // Keep it in sync when layout changes
+      window.addEventListener('resize', ()=>{ if(overlay.classList.contains('open')) syncBurgerVisibility(); });
+    }
+
+    // If other code uses showPage2 to update active buttons, sync burger meta too
+    document.addEventListener('DOMContentLoaded', syncBurgerVisibility);
+  })();
 </script>
 </body>
 </html>
