@@ -79,6 +79,11 @@ select.inp option{background:white}
 
 /* PAGES */
 .page{display:none;padding:1.75rem;max-width:1280px;margin:0 auto;animation:slideUp .28s ease}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;width:100%;box-sizing:border-box;background:var(--noir);border-top:1px solid rgba(255,255,255,.12);z-index:200;padding:.4rem 0 calc(.4rem + env(safe-area-inset-bottom));justify-content:space-evenly;align-items:center;overflow:hidden}
+.mobile-nav button{background:none;border:none;color:rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;gap:.1rem;padding:.25rem 0;cursor:pointer;font-size:.5rem;font-family:"Instrument Sans",sans-serif;font-weight:600;letter-spacing:.01em;flex:1;min-width:0;text-transform:uppercase}
+.mobile-nav button .mn-icon{font-size:1.15rem;line-height:1}
+.mobile-nav button.active{color:var(--accent2)}
+@media(max-width:768px){.nav{display:none}.mobile-nav{display:flex}.page{padding:1rem 1rem 90px}.stat-card{padding:.75rem .9rem}.page-title{font-size:1.3rem !important}.page-sub{font-size:.8rem}.topbar{padding:0 .75rem}}
 .page.active{display:block}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:1rem;flex-wrap:wrap}
@@ -91,6 +96,7 @@ select.inp option{background:white}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:.9rem;margin-bottom:1.75rem}
+@media(max-width:600px){.stats-row{grid-template-columns:1fr 1fr;gap:.6rem}.stat-val{font-size:1.7rem}}
 .stat-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;position:relative;overflow:hidden}
 .stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
 .sc-green::after{background:var(--accent)}.sc-amber::after{background:var(--accent2)}.sc-blue::after{background:var(--blue)}.sc-red::after{background:var(--rouge)}.sc-purple::after{background:var(--purple)}
@@ -313,6 +319,35 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <button class="btn-logout" onclick="doLogout()">Quitter</button>
     </div>
   </div>
+
+  <!-- ── MOBILE NAV ── -->
+  <nav class="mobile-nav" id="mobileNav">
+    <button onclick="showPage2('dashboard')" data-mob="dashboard">
+      <span class="mn-icon">📊</span>Bord
+    </button>
+    <button onclick="showPage2('calendar')" data-mob="calendar">
+      <span class="mn-icon">📅</span>Réserver
+    </button>
+    <button onclick="showPage2('covoiturage')" data-mob="covoiturage">
+      <span class="mn-icon">🤝</span>Covoit
+    </button>
+    <button onclick="showPage2('vehicles')" data-mob="vehicles">
+      <span class="mn-icon">🚗</span>Véhicules
+    </button>
+    <button onclick="showPage2('wallet')" data-mob="wallet">
+      <span class="mn-icon">💳</span>Solde
+    </button>
+    <button onclick="showPage2('profile')" data-mob="profile">
+      <span class="mn-icon">😊</span>Profil
+    </button>
+    <button onclick="showPage2('users')" data-mob="users" id="mobNavUsers" style="display:none">
+      <span class="mn-icon">👥</span>Résidents
+    </button>
+    <button onclick="showPage2('admin')" data-mob="admin" id="mobNavAdmin" style="display:none">
+      <span class="mn-icon">⚙️</span>Admin
+    </button>
+  </nav>
+
 
   <!-- ── DASHBOARD ── -->
   <div class="page active" id="page-dashboard">
@@ -703,8 +738,11 @@ let selectedAvatar = '🧑';
 function showPage2(name){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav button').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.querySelector(`.nav button[data-page="${name}"]`)?.classList.add('active');
+  document.querySelector(`.mobile-nav button[data-mob="${name}"]`)?.classList.add('active');
+  window.scrollTo(0,0);
   if(name==='profile') renderProfile();
 }
 
@@ -763,6 +801,8 @@ function showApp(){
     document.getElementById('navUsers').style.display='';
     document.getElementById('navAdmin').style.display='';
     document.getElementById('addVehicleBtn').style.display='';
+    document.getElementById('mobNavUsers').style.display='';
+    document.getElementById('mobNavAdmin').style.display='';
   }
   renderDashboard();
 }
