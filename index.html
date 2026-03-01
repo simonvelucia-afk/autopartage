@@ -2,19 +2,20 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AutoPartage — Résidence</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
+  --vh: 1vh;
   --bg:#f0ede6; --bg2:#e8e4db; --noir:#1a1714; --accent:#2d5a3d; --accent2:#c17f3e;
   --rouge:#b5392a; --texte:#2a2520; --muted:#7a7368; --border:#ccc8be;
   --card:#ffffff; --shadow:0 2px 12px rgba(26,23,20,.08); --shadow-lg:0 8px 40px rgba(26,23,20,.15);
   --blue:#3a7bbf; --purple:#6d5ab3;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--texte);min-height:100vh;font-size:15px;line-height:1.5}
+body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--texte);min-height:calc(var(--vh, 1vh) * 100);font-size:15px;line-height:1.5}
 
 /* TOPBAR */
 .topbar{background:var(--noir);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
@@ -32,7 +33,7 @@ body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--t
 .btn-logout:hover{background:rgba(255,255,255,.14);color:white}
 
 /* LOGIN */
-.login-screen{min-height:100vh;display:flex;background:var(--noir);position:relative;overflow:hidden}
+.login-screen{min-height:calc(var(--vh, 1vh) * 100);display:flex;background:var(--noir);position:relative;overflow:hidden}
 .login-deco{position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 70% 50%,rgba(45,90,61,.3) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 20% 80%,rgba(193,127,62,.2) 0%,transparent 60%)}
 .login-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4rem;position:relative;z-index:1;max-width:520px}
 .login-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:2.8rem;color:white;line-height:1;margin-bottom:.4rem}
@@ -60,6 +61,11 @@ input,select,textarea{width:100%;padding:.65rem .95rem;border-radius:8px;outline
 .inp{background:white;border:1.5px solid var(--border);color:var(--texte)}
 .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,61,.1)}
 select.inp option{background:white}
+
+/* iPhone: stop auto-zoom on input focus */
+@media (max-width: 768px){
+  input, select, textarea { font-size: 16px; }
+}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.3rem;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.01em}
@@ -156,7 +162,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
 /* MODAL */
 .overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:1rem}
 .overlay.open{display:flex}
-.modal{background:white;border-radius:16px;padding:1.75rem;width:100%;max-width:520px;box-shadow:var(--shadow-lg);animation:slideUp .22s ease;max-height:90vh;overflow-y:auto}
+.modal{background:white;border-radius:16px;padding:1.75rem;width:100%;max-width:520px;box-shadow:var(--shadow-lg);animation:slideUp .22s ease;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.35rem;margin-bottom:1.4rem}
 .modal-actions{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.4rem}
 
@@ -219,7 +225,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .text-muted{color:var(--muted);font-size:.84rem}
 .spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:2rem auto}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;background:var(--bg)}
+.loading-screen{min-height:calc(var(--vh, 1vh) * 100);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;background:var(--bg)}
 .section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
 
 /* TARIF DISPLAY */
@@ -239,6 +245,17 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .seat-child{background:rgba(193,127,62,.1);border:1.5px solid rgba(193,127,62,.25)}
 .seat-driver{background:var(--accent);border:1.5px solid var(--accent)}
 </style>
+<script>
+  // iOS Safari: stabilise 100vh (address bar) using CSS var --vh
+  (function () {
+    function setVh() {
+      document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+  })();
+</script>
 </head>
 <body>
 
