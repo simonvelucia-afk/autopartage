@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoPartage — Résidence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#f0ede6; --bg2:#e8e4db; --noir:#1a1714; --accent:#2d5a3d; --accent2:#c17f3e;
+  --rouge:#b5392a; --texte:#2a2520; --muted:#7a7368; --border:#ccc8be;
+  --card:#ffffff; --shadow:0 2px 12px rgba(26,23,20,.08); --shadow-lg:0 8px 40px rgba(26,23,20,.15);
+  --blue:#3a7bbf; --purple:#6d5ab3;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--texte);min-height:100vh;font-size:15px;line-height:1.5}
+
+/* TOPBAR */
+.topbar{background:var(--noir);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:-.02em;color:white;display:flex;align-items:center;gap:.5rem}
+.logo-dot{width:9px;height:9px;border-radius:50%;background:var(--accent2)}
+.nav{display:flex;gap:.1rem;flex-wrap:wrap}
+.nav button{background:none;border:none;color:rgba(255,255,255,.6);font-family:'Instrument Sans',sans-serif;font-size:.8rem;font-weight:500;padding:.45rem .8rem;cursor:pointer;border-radius:6px;transition:all .18s;white-space:nowrap}
+.nav button:hover{background:rgba(255,255,255,.08);color:white}
+.nav button.active{background:var(--accent);color:white}
+.topbar-right{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
+.user-chip{display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.1);border-radius:20px;padding:.28rem .8rem;font-size:.78rem;color:white}
+.user-chip .apt{background:var(--accent2);color:white;border-radius:10px;padding:.08rem .45rem;font-size:.7rem;font-weight:700}
+.balance-chip{background:rgba(45,90,61,.3);border:1px solid rgba(45,90,61,.4);color:#8fd4a8;border-radius:20px;padding:.28rem .75rem;font-size:.78rem;font-weight:600}
+.btn-logout{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.65);font-size:.76rem;padding:.3rem .75rem;border-radius:6px;cursor:pointer;font-family:'Instrument Sans',sans-serif;transition:all .18s}
+.btn-logout:hover{background:rgba(255,255,255,.14);color:white}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;background:var(--noir);position:relative;overflow:hidden}
+.login-deco{position:absolute;inset:0;background:radial-gradient(ellipse 60% 60% at 70% 50%,rgba(45,90,61,.3) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 20% 80%,rgba(193,127,62,.2) 0%,transparent 60%)}
+.login-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:4rem;position:relative;z-index:1;max-width:520px}
+.login-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:2.8rem;color:white;line-height:1;margin-bottom:.4rem}
+.login-brand span{color:var(--accent2)}
+.login-tagline{color:rgba(255,255,255,.4);font-size:.95rem;margin-bottom:2.5rem;font-style:italic}
+.login-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:2rem;backdrop-filter:blur(10px)}
+.login-right{flex:1;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;padding:4rem}
+.login-visual{width:320px;height:320px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7rem;position:relative}
+.login-visual::before{content:'';position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(193,127,62,.12)}
+@media(max-width:768px){.login-right{display:none}.login-left{max-width:100%}}
+
+/* FORMS */
+.form-group{margin-bottom:1.1rem}
+.lbl-dark{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;color:rgba(255,255,255,.45)}
+.lbl{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;color:var(--muted)}
+input,select,textarea{width:100%;padding:.65rem .95rem;border-radius:8px;outline:none;font-family:'Instrument Sans',sans-serif;font-size:.88rem;transition:all .18s}
+.inp-dark{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:white}
+.inp-dark::placeholder{color:rgba(255,255,255,.28)}
+.inp-dark:focus{border-color:var(--accent2);background:rgba(255,255,255,.1)}
+.inp{background:white;border:1.5px solid var(--border);color:var(--texte)}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,61,.1)}
+select.inp option{background:white}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.3rem;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-size:.83rem;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.01em}
+.btn-green{background:var(--accent);color:white}
+.btn-green:hover{background:#245031;transform:translateY(-1px);box-shadow:0 4px 14px rgba(45,90,61,.35)}
+.btn-amber{background:var(--accent2);color:white}
+.btn-amber:hover{background:#a96e32;transform:translateY(-1px)}
+.btn-blue{background:var(--blue);color:white}
+.btn-blue:hover{background:#2d68a8}
+.btn-ghost{background:transparent;color:var(--texte);border:1.5px solid var(--border)}
+.btn-ghost:hover{background:var(--bg2)}
+.btn-danger{background:rgba(181,57,42,.1);color:var(--rouge);border:1px solid rgba(181,57,42,.25)}
+.btn-danger:hover{background:rgba(181,57,42,.18)}
+.btn-sm{padding:.35rem .8rem;font-size:.76rem}
+.btn-full{width:100%;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* PAGES */
+.page{display:none;padding:1.75rem;max-width:1280px;margin:0 auto;animation:slideUp .28s ease}
+.page.active{display:block}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:1rem;flex-wrap:wrap}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.9rem;letter-spacing:-.03em}
+.page-sub{color:var(--muted);font-size:.87rem;margin-top:.2rem}
+
+/* CARDS */
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.4rem;box-shadow:var(--shadow)}
+.card-label{font-size:.69rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:1rem}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:.9rem;margin-bottom:1.75rem}
+.stat-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.2rem 1.4rem;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.sc-green::after{background:var(--accent)}.sc-amber::after{background:var(--accent2)}.sc-blue::after{background:var(--blue)}.sc-red::after{background:var(--rouge)}.sc-purple::after{background:var(--purple)}
+.stat-val{font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;letter-spacing:-.04em}
+.stat-label{font-size:.75rem;color:var(--muted);margin-top:.15rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.4rem}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.2rem;margin-bottom:1.4rem}
+.grid-4{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1.2rem;margin-bottom:1.4rem}
+@media(max-width:700px){.grid-2{grid-template-columns:1fr}}
+
+/* VEHICLE CARDS */
+.vehicle-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.4rem;transition:all .2s;position:relative}
+.vehicle-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+
+/* STATUS */
+.spill{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .7rem;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.sp-dispo{background:rgba(45,90,61,.12);color:var(--accent);border:1px solid rgba(45,90,61,.2)}
+.sp-reserve{background:rgba(181,57,42,.1);color:var(--rouge);border:1px solid rgba(181,57,42,.2)}
+.sp-maintenance{background:rgba(193,127,62,.12);color:var(--accent2);border:1px solid rgba(193,127,62,.2)}
+.sp-ouvert{background:rgba(45,90,61,.12);color:var(--accent);border:1px solid rgba(45,90,61,.2)}
+.sp-complet{background:rgba(181,57,42,.1);color:var(--rouge);border:1px solid rgba(181,57,42,.2)}
+.sp-annule{background:rgba(0,0,0,.06);color:var(--muted);border:1px solid var(--border)}
+.sp-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:.6rem .95rem;border-bottom:2px solid var(--border);font-family:'Syne',sans-serif;white-space:nowrap}
+td{padding:.8rem .95rem;border-bottom:1px solid rgba(0,0,0,.05);font-size:.85rem;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,0,0,.015)}
+
+/* CALENDAR */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.cal-month-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-hdr{text-align:center;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:.35rem;font-weight:700}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;font-size:.83rem;cursor:pointer;transition:all .15s;border:1.5px solid transparent;position:relative;font-weight:500}
+.cal-day:hover{background:var(--bg2)}
+.cal-day.today{border-color:var(--accent);color:var(--accent);font-weight:700}
+.cal-day.selected{background:var(--accent);color:white;border-color:var(--accent);font-weight:700}
+.cal-day.has-resa::after{content:'';position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--accent2)}
+.cal-day.selected.has-resa::after{background:rgba(255,255,255,.7)}
+.cal-day.other-month{opacity:.22}
+.cal-day.past{opacity:.3;cursor:not-allowed}
+.cal-day.empty{cursor:default}
+
+/* SLOTS */
+.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:.35rem;margin-top:.65rem}
+.slot{padding:.45rem .2rem;text-align:center;border-radius:8px;border:1.5px solid var(--border);font-size:.78rem;cursor:pointer;transition:all .15s;font-weight:500;background:white}
+.slot:hover{border-color:var(--accent);color:var(--accent)}
+.slot.taken{background:var(--bg2);border-color:transparent;color:var(--muted);cursor:not-allowed;text-decoration:line-through;font-size:.7rem}
+.slot.selected{background:var(--accent);border-color:var(--accent);color:white;font-weight:700}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.6);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:white;border-radius:16px;padding:1.75rem;width:100%;max-width:520px;box-shadow:var(--shadow-lg);animation:slideUp .22s ease;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.35rem;margin-bottom:1.4rem}
+.modal-actions{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.4rem}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.75rem;right:1.75rem;background:var(--noir);color:white;border-left:4px solid var(--accent);border-radius:10px;padding:.85rem 1.3rem;font-size:.86rem;z-index:300;max-width:310px;transform:translateY(110px);opacity:0;transition:all .32s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.err{border-color:var(--rouge)}
+
+/* TRIP CARD */
+.trip-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:1.3rem;transition:all .2s;position:relative}
+.trip-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg)}
+.trip-route{display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem}
+.trip-point{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem}
+.trip-arrow{color:var(--muted);font-size:1rem}
+.trip-meta{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.85rem}
+.trip-chip{display:inline-flex;align-items:center;gap:.3rem;background:var(--bg2);border-radius:6px;padding:.22rem .6rem;font-size:.76rem;color:var(--texte);font-weight:500}
+
+/* WALLET */
+.wallet-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;background:linear-gradient(135deg,var(--accent),#1d3d2a);border-radius:14px;color:white;margin-bottom:1.4rem}
+.wallet-amount{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800}
+.wallet-label{font-size:.78rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em}
+.tx-row{display:flex;align-items:center;gap:.75rem;padding:.7rem 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.tx-row:last-child{border-bottom:none}
+.tx-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+.tx-credit{background:rgba(45,90,61,.12);color:var(--accent)}
+.tx-debit{background:rgba(181,57,42,.1);color:var(--rouge)}
+.tx-amount{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;margin-left:auto;flex-shrink:0}
+
+/* AVATAR */
+.avatar{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:1.1rem;line-height:1;flex-shrink:0}
+.av-sm{width:30px;height:30px;font-size:1rem;background:var(--bg2);border:1.5px solid var(--border)}
+.av-md{width:42px;height:42px;font-size:1.5rem;background:var(--bg2);border:1.5px solid var(--border)}
+.av-lg{width:68px;height:68px;font-size:2.6rem;background:var(--bg2);border:2px solid var(--border)}
+.av-topbar{width:28px;height:28px;font-size:.95rem;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+/* Avatar picker */
+.av-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:.4rem;max-height:260px;overflow-y:auto;padding:.25rem}
+.av-opt{width:40px;height:40px;border-radius:10px;border:2px solid transparent;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;transition:all .15s}
+.av-opt:hover{border-color:var(--accent);background:rgba(45,90,61,.08);transform:scale(1.1)}
+.av-opt.picked{border-color:var(--accent);background:rgba(45,90,61,.12);box-shadow:0 0 0 3px rgba(45,90,61,.15)}
+
+/* PAYMENT FLOW BADGES */
+.pay-pending{background:rgba(181,57,42,.08);color:var(--rouge);border:1px solid rgba(181,57,42,.2);border-radius:8px;padding:.35rem .75rem;font-size:.75rem;font-weight:600}
+.pay-driver{background:rgba(193,127,62,.1);color:var(--accent2);border:1px solid rgba(193,127,62,.25);border-radius:8px;padding:.35rem .75rem;font-size:.75rem;font-weight:600}
+.pay-done{background:rgba(45,90,61,.1);color:var(--accent);border:1px solid rgba(45,90,61,.2);border-radius:8px;padding:.35rem .75rem;font-size:.75rem;font-weight:600}
+.pay-flow{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}
+.pay-step{display:flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:600;padding:.28rem .65rem;border-radius:6px}
+.pay-step.done{background:rgba(45,90,61,.1);color:var(--accent)}
+.pay-step.active{background:rgba(193,127,62,.12);color:var(--accent2)}
+.pay-step.pending{background:var(--bg2);color:var(--muted)}
+.pay-arrow{color:var(--muted);font-size:.8rem}
+
+/* MISC */
+.divider{border:none;border-top:1.5px solid var(--border);margin:1.1rem 0}
+.badge{display:inline-flex;align-items:center;padding:.16rem .55rem;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.bg-green{background:rgba(45,90,61,.12);color:var(--accent)}
+.bg-amber{background:rgba(193,127,62,.12);color:var(--accent2)}
+.bg-red{background:rgba(181,57,42,.1);color:var(--rouge)}
+.bg-blue{background:rgba(58,123,191,.1);color:var(--blue)}
+.mb-2{margin-bottom:1rem}.mb-3{margin-bottom:1.5rem}
+.text-muted{color:var(--muted);font-size:.84rem}
+.spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:2rem auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;background:var(--bg)}
+.section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+
+/* TARIF DISPLAY */
+.tarif-box{background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.1rem;font-size:.84rem}
+.tarif-item strong{font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--accent)}
+
+/* COST PREVIEW */
+.cost-preview{background:linear-gradient(135deg,rgba(45,90,61,.08),rgba(193,127,62,.08));border:1.5px solid rgba(45,90,61,.2);border-radius:10px;padding:1rem 1.2rem;margin-top:.75rem}
+.cost-row{display:flex;justify-content:space-between;align-items:center;font-size:.84rem;padding:.25rem 0}
+.cost-row.total{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;border-top:1.5px solid rgba(45,90,61,.2);margin-top:.4rem;padding-top:.6rem}
+
+/* SEATS VISUAL */
+.seats-visual{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}
+.seat{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.seat-free{background:rgba(45,90,61,.1);border:1.5px solid rgba(45,90,61,.25)}
+.seat-taken{background:rgba(181,57,42,.1);border:1.5px solid rgba(181,57,42,.25)}
+.seat-child{background:rgba(193,127,62,.1);border:1.5px solid rgba(193,127,62,.25)}
+.seat-driver{background:var(--accent);border:1.5px solid var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <p style="color:var(--muted);font-size:.88rem">Connexion sécurisée…</p>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen" style="display:none">
+  <div class="login-deco"></div>
+  <div class="login-left">
+    <div class="login-brand">Auto<span>Partage</span></div>
+    <div class="login-tagline">Auto-partage &amp; covoiturage · Résidence</div>
+    <div class="login-box">
+      <div class="form-group">
+        <label class="lbl-dark">Adresse e-mail</label>
+        <input type="email" id="loginEmail" class="inp-dark" placeholder="resident@immeuble.fr" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="lbl-dark">Mot de passe</label>
+        <input type="password" id="loginPass" class="inp-dark" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div id="loginErr" style="color:#e87f73;font-size:.8rem;margin-bottom:.65rem;display:none"></div>
+      <button class="btn btn-amber btn-full" onclick="doLogin()" id="loginBtn">Se connecter</button>
+    </div>
+    <p style="color:rgba(255,255,255,.22);font-size:.73rem;margin-top:1.2rem;text-align:center">Accès sur invitation de l'administrateur uniquement.</p>
+  </div>
+  <div class="login-right"><div class="login-visual">🚗</div></div>
+</div>
+
+<!-- APP -->
+<div id="appShell" style="display:none">
+  <div class="topbar">
+    <div class="logo"><div class="logo-dot"></div>AutoPartage</div>
+    <nav class="nav" id="mainNav">
+      <button class="active" data-page="dashboard">📊 Bord</button>
+      <button data-page="calendar">📅 Réserver</button>
+      <button data-page="covoiturage">🤝 Covoiturage</button>
+      <button data-page="vehicles">🚗 Véhicules</button>
+      <button data-page="wallet">💳 Portefeuille</button>
+      <button data-page="profile">😊 Profil</button>
+      <button data-page="users"   id="navUsers" style="display:none">👥 Résidents</button>
+      <button data-page="admin"   id="navAdmin" style="display:none">⚙️ Admin</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="balance-chip" id="balanceChip">0,00 $ CA</div>
+      <div class="user-chip" onclick="showPage2('profile')" style="cursor:pointer" title="Mon profil">
+        <span class="av-topbar" id="topbarAvatar">🧑</span>
+        <span class="apt" id="userApt">—</span>
+        <span id="userName">—</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Quitter</button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div><div class="page-title">Tableau de bord</div><div class="page-sub" id="dashDate"></div></div>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="grid-2">
+      <div class="card"><div class="card-label">Prochains trajets covoiturage</div><div id="upcomingTrips"></div></div>
+      <div class="card"><div class="card-label">Disponibilité véhicules aujourd'hui</div><div id="todayAvail"></div></div>
+    </div>
+  </div>
+
+  <!-- ── AUTO-PARTAGE ── -->
+  <div class="page" id="page-calendar">
+    <div class="page-header"><div><div class="page-title">Réserver un véhicule</div><div class="page-sub">Location exclusive du véhicule pour la durée choisie</div></div></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="cal-nav">
+          <button class="btn btn-ghost btn-sm" onclick="changeMonth(-1)">‹</button>
+          <span class="cal-month-title" id="calMonthLabel"></span>
+          <button class="btn btn-ghost btn-sm" onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <div class="card">
+        <div class="card-label" id="slotTitle">Choisissez une date</div>
+        <div class="form-group"><label class="lbl">Véhicule</label><select id="vehicleSelect" class="inp" onchange="renderSlots()"></select></div>
+        <div id="slotArea" style="display:none">
+          <label class="lbl">Créneau de départ</label>
+          <div class="slot-grid" id="slotGrid"></div>
+          <div class="divider"></div>
+          <div class="form-group"><label class="lbl">Durée</label>
+            <select id="durationSel" class="inp" onchange="renderSlots()">
+              <option value="1">1 heure</option><option value="2">2 heures</option>
+              <option value="3">3 heures</option><option value="4">4 heures</option>
+              <option value="8">Journée (8h)</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="lbl">Motif <span style="font-weight:400;text-transform:none;letter-spacing:0">(optionnel)</span></label>
+            <input type="text" id="motifInput" class="inp" placeholder="Courses, déménagement…">
+          </div>
+          <button class="btn btn-green btn-full" id="confirmBtn" disabled onclick="confirmReservation()">✓ Confirmer</button>
+        </div>
+        <p id="slotHint" class="text-muted" style="margin-top:.5rem">Cliquez sur une date pour voir les créneaux.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Mes réservations</div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Véhicule</th><th>Créneau</th><th>Durée</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody id="myResaBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ── COVOITURAGE ── -->
+  <div class="page" id="page-covoiturage">
+    <div class="page-header">
+      <div><div class="page-title">Covoiturage</div><div class="page-sub">Proposez ou rejoignez un trajet avec un véhicule de la résidence</div></div>
+      <button class="btn btn-green" onclick="openTripModal()">+ Proposer un trajet</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-3" style="padding:.9rem 1.2rem">
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:180px"><label class="lbl" style="margin-bottom:.3rem">Date</label><input type="date" id="tripFilterDate" class="inp" onchange="renderTrips()"></div>
+        <div style="flex:1;min-width:160px"><label class="lbl" style="margin-bottom:.3rem">Destination</label>
+          <select id="tripFilterDest" class="inp" onchange="renderTrips()"><option value="">Toutes destinations</option></select>
+        </div>
+        <div style="flex:1;min-width:140px"><label class="lbl" style="margin-bottom:.3rem">Statut</label>
+          <select id="tripFilterStatus" class="inp" onchange="renderTrips()">
+            <option value="ouvert">Trajets ouverts</option><option value="">Tous</option>
+            <option value="complet">Complets</option><option value="terminé">Terminés</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="tripsGrid" class="grid-3"></div>
+    <p id="tripsEmpty" class="text-muted" style="display:none;text-align:center;padding:2rem">Aucun trajet disponible. Soyez le premier à en proposer un !</p>
+  </div>
+
+  <!-- ── VEHICLES ── -->
+  <div class="page" id="page-vehicles">
+    <div class="page-header">
+      <div><div class="page-title">Véhicules</div><div class="page-sub">Flotte partagée de la résidence</div></div>
+      <button class="btn btn-green" id="addVehicleBtn" style="display:none" onclick="openVehicleModal()">+ Ajouter</button>
+    </div>
+    <div class="grid-3" id="vehicleGrid"></div>
+  </div>
+
+  <!-- ── PROFIL ── -->
+  <div class="page" id="page-profile">
+    <div class="page-header"><div><div class="page-title">Mon profil</div><div class="page-sub">Personnalisez votre avatar visible par tous les résidents</div></div></div>
+    <div class="grid-2">
+      <div class="card">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1rem 0 1.5rem">
+          <div class="av-lg" id="profileAvatarPreview">🧑</div>
+          <div style="text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.2rem" id="profileName">—</div>
+            <div style="color:var(--muted);font-size:.84rem" id="profileApt">—</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-label">Choisissez votre avatar</div>
+        <div class="av-grid" id="avatarGrid"></div>
+        <button class="btn btn-green btn-full" style="margin-top:1rem" onclick="saveAvatar()">Enregistrer mon avatar</button>
+      </div>
+      <div class="card">
+        <div class="card-label">Mes informations</div>
+        <div style="display:flex;flex-direction:column;gap:.75rem;font-size:.88rem">
+          <div style="display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.08em">Appartement</span>
+            <span id="piApt" style="font-weight:600">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.08em">Nom</span>
+            <span id="piName" style="font-weight:600">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.08em">Email</span>
+            <span id="piEmail" style="font-weight:600;font-size:.82rem;color:var(--muted)">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.08em">Rôle</span>
+            <span id="piRole" class="badge bg-blue">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:.6rem 0">
+            <span style="color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.08em">Solde</span>
+            <span id="piBalance" style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent)">—</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-label">Modifier mon mot de passe</div>
+        <div class="form-group"><label class="lbl">Nouveau mot de passe</label><input type="password" id="newPass" class="inp" placeholder="Min. 8 caractères"></div>
+        <div class="form-group"><label class="lbl">Confirmer</label><input type="password" id="newPass2" class="inp" placeholder="Répétez le mot de passe"></div>
+        <button class="btn btn-ghost" onclick="changePassword()">Mettre à jour le mot de passe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WALLET ── -->
+  <div class="page" id="page-wallet">
+    <div class="page-header"><div><div class="page-title">Portefeuille</div><div class="page-sub">Solde virtuel pour les trajets covoiturage</div></div></div>
+    <div class="grid-2">
+      <div>
+        <div class="wallet-header">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div class="av-md" id="walletAvatar" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.25)">🧑</div>
+            <div><div class="wallet-label">Solde disponible</div><div class="wallet-amount" id="walletAmount">0,00 $ CA</div></div>
+          </div>
+          <div style="font-size:2rem;opacity:.6">💳</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Mes transactions récentes</div>
+          <div id="txList"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Comment ça fonctionne ?</div>
+        <div style="font-size:.87rem;line-height:1.7;color:var(--texte)">
+          <p style="margin-bottom:.75rem">Le portefeuille virtuel permet de régler les frais de covoiturage <strong>directement sur la plateforme</strong>, en dollars canadiens.</p>
+          <p style="margin-bottom:.75rem"><strong>1. Inscription au trajet :</strong> votre solde est débité immédiatement dès que vous rejoignez un trajet.</p>
+          <p style="margin-bottom:.75rem"><strong>2. Confirmation conducteur :</strong> après le trajet, le conducteur confirme votre présence sur la plateforme.</p>
+          <p style="margin-bottom:.75rem"><strong>3. Validation admin :</strong> l'administrateur valide définitivement le paiement → le conducteur est alors crédité.</p>
+          <p><strong>Recharge du solde :</strong> l'administrateur recharge les soldes (règlement par virement, chèque ou espèces hors plateforme).</p>
+        </div>
+        <div class="divider"></div>
+        <div id="walletAdminSection" style="display:none">
+          <div class="card-label">Créditer un résident (admin)</div>
+          <div class="form-group"><label class="lbl">Résident</label><select id="creditUserId" class="inp"></select></div>
+          <div class="form-group"><label class="lbl">Montant ($ CA)</label><input type="number" id="creditAmount" class="inp" placeholder="20.00" step="0.01" min="0"></div>
+          <div class="form-group"><label class="lbl">Note</label><input type="text" id="creditDesc" class="inp" placeholder="Recharge mensuelle…"></div>
+          <button class="btn btn-green" onclick="adminCredit()">Créditer le solde</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── USERS ── -->
+  <div class="page" id="page-users">
+    <div class="page-header">
+      <div><div class="page-title">Résidents</div><div class="page-sub">Gestion des accès et soldes</div></div>
+      <button class="btn btn-green" onclick="openUserModal()">+ Créer un compte</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table><thead><tr><th>Apt.</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Solde</th><th>Réservations</th><th>Statut</th><th></th></tr></thead><tbody id="usersBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ── ADMIN ── -->
+  <div class="page" id="page-admin">
+    <div class="page-header"><div><div class="page-title">Administration</div><div class="page-sub">Vue globale — réservations, trajets, tarifs</div></div></div>
+
+    <!-- Tarifs -->
+    <div class="card mb-3">
+      <div class="card-label">Tarification covoiturage</div>
+      <div class="grid-2" style="margin-bottom:.75rem">
+        <div class="form-group" style="margin:0"><label class="lbl">Prix par km ($ CA)</label><input type="number" id="adminPriceKm" class="inp" step="0.001" min="0"></div>
+        <div class="form-group" style="margin:0"><label class="lbl">Prix par minute ($ CA)</label><input type="number" id="adminPriceMin" class="inp" step="0.001" min="0"></div>
+      </div>
+      <button class="btn btn-amber" onclick="saveTarifs()">Enregistrer les tarifs</button>
+      <span id="tarifSaved" style="color:var(--accent);font-size:.8rem;margin-left:.75rem;display:none">✓ Enregistré</span>
+    </div>
+
+    <!-- Trajets prédéfinis -->
+    <div class="card mb-3">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div class="card-label" style="margin:0">Trajets prédéfinis</div>
+        <button class="btn btn-ghost btn-sm" onclick="openRouteModal()">+ Ajouter</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Libellé</th><th>Origine</th><th>Destination</th><th>Distance</th><th>Durée</th><th>Coût estimé</th><th></th></tr></thead><tbody id="routesBody"></tbody></table></div>
+    </div>
+
+    <!-- Paiements à valider -->
+    <div class="card mb-3">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div class="card-label" style="margin:0">✅ Paiements à valider <span id="pendingPayBadge" style="background:var(--rouge);color:white;border-radius:20px;padding:.1rem .55rem;font-size:.72rem;font-weight:700;margin-left:.4rem;display:none"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="renderAdminPayments()">↺ Actualiser</button>
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">Le conducteur a d'abord confirmé la réception. L'admin valide définitivement et crédite le conducteur.</p>
+      <div class="table-wrap"><table><thead><tr><th>Trajet</th><th>Passager</th><th>Conducteur</th><th>Montant</th><th>Solde passager</th><th>Étape</th><th></th></tr></thead><tbody id="adminPayBody"></tbody></table></div>
+    </div>
+
+    <!-- Toutes réservations -->
+    <div class="card mb-3">
+      <div class="card-label">Toutes les réservations (auto-partage)</div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Résident</th><th>Véhicule</th><th>Créneau</th><th>Durée</th><th>Motif</th><th>Statut</th><th></th></tr></thead><tbody id="adminResaBody"></tbody></table></div>
+    </div>
+
+    <!-- Tous les trajets -->
+    <div class="card">
+      <div class="card-label">Tous les trajets (covoiturage)</div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Conducteur</th><th>Trajet</th><th>Départ</th><th>Places</th><th>Coût/passager</th><th>Statut</th><th></th></tr></thead><tbody id="adminTripsBody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Vehicle -->
+<div class="overlay" id="vehicleModal">
+  <div class="modal">
+    <div class="modal-title" id="vehicleModalTitle">Ajouter un véhicule</div>
+    <div class="form-group"><label class="lbl">Nom / Modèle</label><input type="text" id="vName" class="inp" placeholder="Renault Zoé"></div>
+    <div class="form-group"><label class="lbl">Immatriculation</label><input type="text" id="vPlate" class="inp" placeholder="AB-123-CD"></div>
+    <div class="form-group"><label class="lbl">Type</label><select id="vType" class="inp"><option value="🚗">🚗 Berline</option><option value="🚐">🚐 Monospace</option><option value="🚙">🚙 SUV</option><option value="⚡">⚡ Électrique</option><option value="🚚">🚚 Utilitaire</option></select></div>
+    <div class="form-group"><label class="lbl">Nombre de places passagers</label><input type="number" id="vSeats" class="inp" value="4" min="1" max="9"></div>
+    <div class="form-group"><label class="lbl">Informations</label><input type="text" id="vInfo" class="inp" placeholder="GPS, boîte auto…"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('vehicleModal')">Annuler</button><button class="btn btn-green" onclick="saveVehicle()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- User -->
+<div class="overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-title">Créer un compte résident</div>
+    <div class="form-group"><label class="lbl">Appartement</label><input type="text" id="uApt" class="inp" placeholder="3B"></div>
+    <div class="form-group"><label class="lbl">Nom complet</label><input type="text" id="uName" class="inp" placeholder="Marie Dupont"></div>
+    <div class="form-group"><label class="lbl">Email</label><input type="email" id="uEmail" class="inp"></div>
+    <div class="form-group"><label class="lbl">Mot de passe temporaire</label><input type="text" id="uPass" class="inp" placeholder="Min. 8 caractères"></div>
+    <div class="form-group"><label class="lbl">Rôle</label><select id="uRole" class="inp"><option value="resident">Résident</option><option value="admin">Administrateur</option></select></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('userModal')">Annuler</button><button class="btn btn-green" onclick="saveUser()">Créer</button></div>
+  </div>
+</div>
+
+<!-- Trip -->
+<div class="overlay" id="tripModal">
+  <div class="modal">
+    <div class="modal-title">Proposer un trajet</div>
+
+    <!-- Route type -->
+    <div class="form-group">
+      <label class="lbl">Type de trajet</label>
+      <div style="display:flex;gap:.5rem;margin-bottom:.75rem">
+        <button class="btn btn-green btn-sm" id="btnPreset" onclick="setRouteType('preset')">Trajet prédéfini</button>
+        <button class="btn btn-ghost btn-sm" id="btnCustom" onclick="setRouteType('custom')">Adresse libre</button>
+      </div>
+    </div>
+
+    <div id="presetSection">
+      <div class="form-group"><label class="lbl">Trajet prédéfini</label><select id="routeSelect" class="inp" onchange="onRouteSelect()"><option value="">Choisir…</option></select></div>
+    </div>
+    <div id="customSection" style="display:none">
+      <div class="form-group"><label class="lbl">Point de départ</label><input type="text" id="tripOrigin" class="inp" placeholder="15 rue de la Paix, Paris"></div>
+      <div class="form-group"><label class="lbl">Destination</label><input type="text" id="tripDest" class="inp" placeholder="Gare de Lyon, Paris"></div>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-blue btn-sm" onclick="calcDistance()">🗺 Calculer la distance</button>
+        <span id="distResult" style="font-size:.82rem;color:var(--muted);align-self:center"></span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grid-2" style="margin-bottom:.75rem">
+      <div class="form-group" style="margin:0"><label class="lbl">Date de départ</label><input type="date" id="tripDate" class="inp"></div>
+      <div class="form-group" style="margin:0"><label class="lbl">Heure de départ</label><input type="time" id="tripTime" class="inp" step="60"></div>
+    </div>
+
+    <div class="form-group"><label class="lbl">Véhicule</label><select id="tripVehicle" class="inp" onchange="onTripVehicleChange()"></select></div>
+
+    <div class="grid-2" style="margin-bottom:.75rem">
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Places enfants (conducteur)</label>
+        <input type="number" id="tripChildSeats" class="inp" value="0" min="0" onchange="updateTripPreview()">
+        <p style="font-size:.73rem;color:var(--muted);margin-top:.3rem">Places réservées pour vos enfants — non proposées aux passagers, mais comptent dans le coût partagé.</p>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Notes pour les passagers</label>
+        <input type="text" id="tripNotes" class="inp" placeholder="Bagages limités, chien ok…">
+      </div>
+    </div>
+
+    <!-- Preview coût -->
+    <div id="costPreview" style="display:none">
+      <div class="cost-preview">
+        <div class="cost-row"><span>Distance</span><span id="prevKm">—</span></div>
+        <div class="cost-row"><span>Durée estimée</span><span id="prevMin">—</span></div>
+        <div class="cost-row"><span>Coût total ($ CA/km × km + $ CA/min × min)</span><span id="prevTotal">—</span></div>
+        <div class="cost-row"><span>Places disponibles passagers</span><span id="prevSeats">—</span></div>
+        <div class="cost-row total"><span>Votre part (si trajet complet)</span><span id="prevDriver" style="color:var(--accent)">—</span></div>
+      </div>
+      <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem">* La part conducteur diminue à chaque passager qui s'inscrit.</p>
+      <!-- Seats visual -->
+      <div style="margin-top:.75rem"><label class="lbl">Aperçu des places</label><div class="seats-visual" id="seatsPreview"></div></div>
+    </div>
+
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('tripModal')">Annuler</button><button class="btn btn-green" id="tripSubmitBtn" onclick="submitTrip()">Publier le trajet</button></div>
+  </div>
+</div>
+
+<!-- Trip Detail / Join -->
+<div class="overlay" id="tripDetailModal">
+  <div class="modal">
+    <div class="modal-title" id="tdTitle">Détail du trajet</div>
+    <div id="tdBody"></div>
+    <div class="modal-actions" id="tdActions"></div>
+  </div>
+</div>
+
+<!-- Route (admin) -->
+<div class="overlay" id="routeModal">
+  <div class="modal">
+    <div class="modal-title">Ajouter un trajet prédéfini</div>
+    <div class="form-group"><label class="lbl">Libellé</label><input type="text" id="rLabel" class="inp" placeholder="Résidence → Gare"></div>
+    <div class="form-group"><label class="lbl">Origine</label><input type="text" id="rOrigin" class="inp"></div>
+    <div class="form-group"><label class="lbl">Destination</label><input type="text" id="rDest" class="inp"></div>
+    <div class="grid-2">
+      <div class="form-group" style="margin:0"><label class="lbl">Distance (km)</label><input type="number" id="rKm" class="inp" step="0.1"></div>
+      <div class="form-group" style="margin:0"><label class="lbl">Durée (min)</label><input type="number" id="rMin" class="inp"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('routeModal')">Annuler</button><button class="btn btn-green" onclick="saveRoute()">Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="config.js"></script>
+<script>
+// ─── SUPABASE ───────────────────────────────────────────────
+let sb;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+catch(e){ document.getElementById('loadingScreen').style.display='none'; document.getElementById('loginScreen').style.display='flex'; }
+
+// ─── AVATARS ────────────────────────────────────────────────
+const AVATARS = [
+  '🧑','👩','👨','🧔','👱','👩‍🦰','👨‍🦰','👩‍🦱','👨‍🦱','👩‍🦳','👨‍🦳','👩‍🦲','👨‍🦲',
+  '🧑‍🦯','👵','👴','🧓','🧑‍💼','👩‍💼','👨‍💼','🧑‍🔧','👩‍🔧','👨‍🔧','🧑‍🚀','👩‍🚀','👨‍🚀',
+  '🧑‍🎨','👩‍🎨','👨‍🎨','🧑‍🏫','👩‍🏫','👨‍🏫','🧑‍⚕️','👩‍⚕️','👨‍⚕️','🧑‍🍳','👩‍🍳','👨‍🍳',
+  '🐱','🐶','🦊','🐺','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦋','🦄',
+  '🚗','🚕','🚙','🏎️','🚓','🚑','🚌','🚐','🛻','🚚','🏍️','🛵','🚲','🛴',
+  '⭐','🌟','💫','✨','🌈','🌸','🌺','🌻','🍁','🎯','🎸','🎺','🎻','🎹','🎮',
+];
+let selectedAvatar = '🧑';
+
+function showPage2(name){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelector(`.nav button[data-page="${name}"]`)?.classList.add('active');
+  if(name==='profile') renderProfile();
+}
+
+// ─── STATE ──────────────────────────────────────────────────
+let CU=null, CP=null, vehicles=[], routes=[], tarif={price_per_km:.18,price_per_min:.05};
+let calDate=new Date(), selectedDate=null, selectedSlot=null;
+let tripRouteType='preset', tripDistKm=null, tripDistMin=null, tripVehicleSeats=4;
+
+// ─── INIT ───────────────────────────────────────────────────
+async function init(){
+  if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){CU=session.user;await bootstrap();showApp();}
+  else showLogin();
+  document.getElementById('loadingScreen').style.display='none';
+  sb.auth.onAuthStateChange(async(ev,s)=>{
+    if(ev==='SIGNED_IN'&&s){CU=s.user;await bootstrap();showApp();}
+    else if(ev==='SIGNED_OUT') showLogin();
+  });
+}
+async function bootstrap(){
+  await Promise.all([loadProfile(),loadVehicles(),loadRoutes(),loadTarif()]);
+}
+async function loadProfile(){
+  const {data}=await sb.from('profiles').select('*').eq('id',CU.id).single();
+  CP=data;
+}
+async function loadVehicles(){
+  const {data}=await sb.from('vehicles').select('*').order('name');
+  vehicles=data||[];
+}
+async function loadRoutes(){
+  const {data}=await sb.from('predefined_routes').select('*').eq('active',true).order('label');
+  routes=data||[];
+}
+async function loadTarif(){
+  const {data}=await sb.from('tarifs').select('*').limit(1).single();
+  if(data) tarif=data;
+}
+
+function showApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='block';
+  document.getElementById('userApt').textContent=CP?.apt||'?';
+  document.getElementById('userName').textContent=CP?.full_name?.split(' ')[0]||CU.email;
+  selectedAvatar=CP?.avatar||'🧑';
+  updateAvatarEverywhere();
+  updateBalanceChip();
+  if(CP?.role==='admin'){
+    document.getElementById('navUsers').style.display='';
+    document.getElementById('navAdmin').style.display='';
+    document.getElementById('addVehicleBtn').style.display='';
+  }
+  renderDashboard();
+}
+
+function updateAvatarEverywhere(){
+  const av=CP?.avatar||'🧑';
+  document.getElementById('topbarAvatar').textContent=av;
+  document.getElementById('walletAvatar').textContent=av;
+}
+function showLogin(){
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+function updateBalanceChip(){
+  const b=CP?.balance||0;
+  document.getElementById('balanceChip').textContent=fmt(b)+' $ CA';
+  document.getElementById('walletAmount').textContent=fmt(b)+' $ CA';
+}
+
+// ─── AUTH ────────────────────────────────────────────────────
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const btn=document.getElementById('loginBtn');
+  const err=document.getElementById('loginErr');
+  if(!email||!pass){showErr2('Champs requis.');return;}
+  btn.disabled=true;btn.textContent='Connexion…';
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false;btn.textContent='Se connecter';
+  if(error){showErr2('Email ou mot de passe incorrect.');}
+  else err.style.display='none';
+}
+function showErr2(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
+async function doLogout(){await sb.auth.signOut();}
+
+// ─── NAV ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('mainNav').addEventListener('click',e=>{
+    const b=e.target.closest('button[data-page]');
+    if(!b)return;
+    const p=b.dataset.page;
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+    document.getElementById('page-'+p).classList.add('active');
+    b.classList.add('active');
+    const fn={dashboard:renderDashboard,calendar:renderCalendar,covoiturage:renderCovoiturage,
+               vehicles:renderVehicles,wallet:renderWallet,profile:renderProfile,
+               users:renderUsers,admin:renderAdmin};
+    fn[p]&&fn[p]();
+  });
+  document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('loginScreen').style.display!=='none')doLogin();});
+  init();
+});
+
+// ─── DASHBOARD ───────────────────────────────────────────────
+async function renderDashboard(){
+  const now=new Date();
+  document.getElementById('dashDate').textContent=now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const today=ds(now);
+  const [{data:resas},{data:trips}]=await Promise.all([
+    sb.from('reservations').select('*,vehicles(name,type)').eq('status','confirmée'),
+    sb.from('trips').select('*,profiles(full_name,apt,avatar)').eq('status','ouvert').gte('departure_date',today).order('departure_date').order('departure_time').limit(5)
+  ]);
+  const todayR=(resas||[]).filter(r=>r.date===today);
+  const myR=(resas||[]).filter(r=>r.user_id===CU.id);
+  const dispoV=vehicles.filter(v=>v.status==='disponible'&&!todayR.find(r=>r.vehicle_id===v.id)).length;
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card sc-green"><div class="stat-val">${vehicles.filter(v=>v.status==='disponible').length}</div><div class="stat-label">Véhicules dispos</div></div>
+    <div class="stat-card sc-amber"><div class="stat-val">${dispoV}</div><div class="stat-label">Libres aujourd'hui</div></div>
+    <div class="stat-card sc-blue"><div class="stat-val">${(trips||[]).length}</div><div class="stat-label">Trajets ouverts</div></div>
+    <div class="stat-card sc-red"><div class="stat-val">${myR.length}</div><div class="stat-label">Mes réservations</div></div>
+  `;
+
+  document.getElementById('upcomingTrips').innerHTML=(trips||[]).length===0
+    ?'<p class="text-muted">Aucun trajet à venir.</p>'
+    :(trips||[]).map(t=>`
+      <div style="display:flex;align-items:center;gap:.7rem;padding:.65rem 0;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer" onclick="openTripDetail('${t.id}')">
+        <div class="av-sm">${t.profiles?.avatar||'🧑'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.87rem">${t.origin} → ${t.destination}</div>
+          <div class="text-muted" style="font-size:.76rem">${fmtDate(t.departure_date)} à ${t.departure_time?.slice(0,5)} · Apt.${t.profiles?.apt||'?'} · ${t.seats_available} place(s) libre(s)</div>
+        </div>
+        <span class="spill sp-ouvert"><span class="sp-dot"></span>${fmt(t.cost_per_passenger||0)} $ CA/pers.</span>
+      </div>`).join('');
+
+  document.getElementById('todayAvail').innerHTML=vehicles.map(v=>{
+    const taken=todayR.some(r=>r.vehicle_id===v.id);
+    const s=v.status!=='disponible'?v.status:(taken?'réservé':'disponible');
+    const cls=s==='disponible'?'sp-dispo':s==='réservé'?'sp-reserve':'sp-maintenance';
+    const lbl=s==='disponible'?'Disponible':s==='réservé'?'Réservé':'Maintenance';
+    return `<div style="display:flex;align-items:center;gap:.7rem;padding:.65rem 0;border-bottom:1px solid rgba(0,0,0,.05)">
+      <span style="font-size:1.5rem">${v.type}</span>
+      <div style="flex:1"><div style="font-weight:600;font-size:.87rem">${v.name}</div><div class="text-muted" style="font-size:.75rem">${v.plate}</div></div>
+      <span class="spill ${cls}"><span class="sp-dot"></span>${lbl}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── AUTO-PARTAGE ─────────────────────────────────────────────
+function renderCalendar(){renderCalGrid();populateVehicleSel();renderMyResa();}
+function renderCalGrid(){
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  document.getElementById('calMonthLabel').textContent=new Date(y,m,1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  const offset=(new Date(y,m,1).getDay()+6)%7,days=new Date(y,m+1,0).getDate();
+  const today=ds(new Date());
+  sb.from('reservations').select('date').eq('status','confirmée')
+    .gte('date',`${y}-${String(m+1).padStart(2,'0')}-01`)
+    .lte('date',`${y}-${String(m+1).padStart(2,'0')}-${String(days).padStart(2,'0')}`)
+    .then(({data})=>{
+      const rd=new Set((data||[]).map(r=>r.date));
+      let h=['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d=>`<div class="cal-hdr">${d}</div>`).join('');
+      for(let i=0;i<offset;i++)h+='<div class="cal-day empty"></div>';
+      const todayDate=new Date();todayDate.setHours(0,0,0,0);
+      for(let d=1;d<=days;d++){
+        const dstr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isPast=new Date(y,m,d)<todayDate;
+        const cls=[isPast?'past':'',dstr===today?'today':'',dstr===selectedDate?'selected':'',rd.has(dstr)?'has-resa':''].filter(Boolean).join(' ');
+        h+=`<div class="cal-day ${cls}" onclick="${isPast?'':'selectDate(\''+dstr+'\')'}">${d}</div>`;
+      }
+      document.getElementById('calGrid').innerHTML=h;
+    });
+}
+function changeMonth(dir){calDate.setMonth(calDate.getMonth()+dir);renderCalGrid();}
+function selectDate(d){
+  selectedDate=d;selectedSlot=null;
+  document.getElementById('confirmBtn').disabled=true;
+  renderCalGrid();
+  document.getElementById('slotTitle').textContent='📅 '+fmtDate(d);
+  document.getElementById('slotArea').style.display='block';
+  document.getElementById('slotHint').style.display='none';
+  renderSlots();
+}
+function populateVehicleSel(){
+  document.getElementById('vehicleSelect').innerHTML=vehicles.filter(v=>v.status==='disponible').map(v=>`<option value="${v.id}">${v.type} ${v.name} — ${v.plate}</option>`).join('');
+}
+async function renderSlots(){
+  if(!selectedDate)return;
+  const vid=document.getElementById('vehicleSelect').value;
+  const dur=parseInt(document.getElementById('durationSel').value);
+  const {data}=await sb.from('reservations').select('slot,duration').eq('date',selectedDate).eq('vehicle_id',vid).eq('status','confirmée');
+  const taken=new Set((data||[]).flatMap(r=>{const s=[];for(let i=0;i<r.duration;i++)s.push(r.slot+i);return s;}));
+  let h='';
+  for(let h2=7;h2<=21;h2++){
+    let ok=true;for(let i=0;i<dur;i++)if(taken.has(h2+i)){ok=false;break;}
+    const tk=taken.has(h2);
+    const sel=selectedSlot===h2;
+    h+=tk?`<div class="slot taken">${h2}h</div>`:
+       !ok?`<div class="slot taken" title="Durée trop longue">${h2}h</div>`:
+       `<div class="slot ${sel?'selected':''}" onclick="selectSlot(${h2})">${h2}h</div>`;
+  }
+  document.getElementById('slotGrid').innerHTML=h;
+  if(selectedSlot!==null){let ok=true;for(let i=0;i<dur;i++)if(taken.has(selectedSlot+i)){ok=false;break;}if(!ok){selectedSlot=null;document.getElementById('confirmBtn').disabled=true;}}
+}
+function selectSlot(h){selectedSlot=h;document.getElementById('confirmBtn').disabled=false;renderSlots();}
+async function confirmReservation(){
+  if(!selectedDate||selectedSlot===null)return;
+  const vid=document.getElementById('vehicleSelect').value;
+  const dur=parseInt(document.getElementById('durationSel').value);
+  const motif=document.getElementById('motifInput').value.trim();
+  const btn=document.getElementById('confirmBtn');
+  btn.disabled=true;btn.textContent='Enregistrement…';
+  const {error}=await sb.from('reservations').insert({user_id:CU.id,vehicle_id:vid,date:selectedDate,slot:selectedSlot,duration:dur,motif,status:'confirmée'});
+  btn.textContent='✓ Confirmer';
+  if(error){showToast('Erreur : '+error.message,true);btn.disabled=false;return;}
+  showToast('✅ Réservation confirmée !');
+  selectedSlot=null;btn.disabled=true;
+  document.getElementById('motifInput').value='';
+  renderCalGrid();renderSlots();renderMyResa();renderDashboard();
+}
+async function renderMyResa(){
+  const {data}=await sb.from('reservations').select('*,vehicles(name,type)').eq('user_id',CU.id).order('date',{ascending:false});
+  const tb=document.getElementById('myResaBody');
+  if(!data?.length){tb.innerHTML='<tr><td colspan="7" class="text-muted">Aucune réservation.</td></tr>';return;}
+  tb.innerHTML=data.map(r=>`<tr>
+    <td>${fmtDate(r.date)}</td><td>${r.vehicles?.type||''} ${r.vehicles?.name||'—'}</td>
+    <td>${r.slot}h00</td><td>${r.duration}h</td><td>${r.motif||'—'}</td>
+    <td><span class="badge ${r.status==='confirmée'?'bg-green':'bg-red'}">${r.status}</span></td>
+    <td>${r.status==='confirmée'?`<button class="btn btn-danger btn-sm" onclick="cancelResa('${r.id}')">Annuler</button>`:''}</td>
+  </tr>`).join('');
+}
+async function cancelResa(id){
+  if(!confirm('Confirmer l\'annulation ?'))return;
+  await sb.from('reservations').update({status:'annulée'}).eq('id',id);
+  showToast('Annulée');renderMyResa();renderCalGrid();renderDashboard();
+}
+
+// ─── COVOITURAGE ─────────────────────────────────────────────
+async function renderCovoiturage(){
+  // Populate destination filter
+  const destSel=document.getElementById('tripFilterDest');
+  const dests=[...new Set(routes.map(r=>r.destination))];
+  destSel.innerHTML='<option value="">Toutes destinations</option>'+dests.map(d=>`<option value="${d}">${d}</option>`).join('');
+  renderTrips();
+}
+
+async function renderTrips(){
+  const fDate=document.getElementById('tripFilterDate').value;
+  const fDest=document.getElementById('tripFilterDest').value;
+  const fStat=document.getElementById('tripFilterStatus').value;
+  let q=sb.from('trips').select('*,profiles(full_name,apt,avatar),vehicles(name,type,seats),trip_passengers(id,status)').order('departure_date').order('departure_time');
+  if(fDate)q=q.eq('departure_date',fDate);
+  if(fDest)q=q.eq('destination',fDest);
+  if(fStat)q=q.eq('status',fStat);
+  const {data}=await q;
+  const trips=data||[];
+  document.getElementById('tripsEmpty').style.display=trips.length?'none':'block';
+  document.getElementById('tripsGrid').innerHTML=trips.map(t=>{
+    const paxCount=(t.trip_passengers||[]).filter(p=>p.status==='confirmé').length;
+    const isMine=t.driver_id===CU.id;
+    const isJoined=(t.trip_passengers||[]).some(p=>p.passenger_id===CU.id&&p.status==='confirmé');
+    const cls=t.status==='ouvert'?'sp-ouvert':t.status==='complet'?'sp-complet':'sp-annule';
+    return `<div class="trip-card" onclick="openTripDetail('${t.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div class="av-sm">${t.profiles?.avatar||'🧑'}</div>
+          <span style="font-size:.78rem;color:var(--muted)">Apt. ${t.profiles?.apt||'?'}</span>
+        </div>
+        <div style="display:flex;gap:.4rem;align-items:center">
+          <span class="spill ${cls}"><span class="sp-dot"></span>${t.status}</span>
+          ${isMine?'<span class="badge bg-amber">Mon trajet</span>':''}
+          ${isJoined&&!isMine?'<span class="badge bg-green">Inscrit</span>':''}
+        </div>
+      </div>
+      <div class="trip-route">
+        <span class="trip-point">${t.origin}</span>
+        <span class="trip-arrow">→</span>
+        <span class="trip-point">${t.destination}</span>
+      </div>
+      <div class="trip-meta">
+        <span class="trip-chip">📅 ${fmtDate(t.departure_date)}</span>
+        <span class="trip-chip">🕐 ${t.departure_time?.slice(0,5)}</span>
+        <span class="trip-chip">🚗 ${t.vehicles?.type||''} ${t.vehicles?.name||''}</span>
+        <span class="trip-chip">📍 ${t.distance_km?t.distance_km+' km':'—'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          ${renderSeatsLine(t.vehicles?.seats||4,t.seats_children,paxCount)}
+          <span style="font-size:.76rem;color:var(--muted)">${t.seats_available??'?'} place(s) libre(s)</span>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;color:var(--accent)">${fmt(t.cost_per_passenger||0)} $ CA</div>
+          <div style="font-size:.72rem;color:var(--muted)">par personne</div>
+        </div>
+      </div>
+      ${t.notes?`<div style="margin-top:.7rem;font-size:.78rem;color:var(--muted);background:var(--bg2);border-radius:6px;padding:.4rem .6rem">💬 ${t.notes}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderSeatsLine(total,children,pax){
+  let h='<div class="seats-visual" style="margin:.35rem 0">';
+  h+=`<div class="seat seat-driver" title="Conducteur">🧑</div>`;
+  for(let i=0;i<children;i++) h+=`<div class="seat seat-child" title="Enfant conducteur">👶</div>`;
+  for(let i=0;i<pax;i++) h+=`<div class="seat seat-taken" title="Passager">🧑</div>`;
+  const free=total-children-pax;
+  for(let i=0;i<Math.max(0,free);i++) h+=`<div class="seat seat-free" title="Libre">○</div>`;
+  return h+'</div>';
+}
+
+async function openTripDetail(id){
+  const [{data:t},{data:pax}]=await Promise.all([
+    sb.from('trips').select('*,profiles!driver_id(full_name,apt,avatar),vehicles(name,type,seats)').eq('id',id).single(),
+    sb.from('trip_passengers').select('*,profiles(full_name,apt,balance,avatar)').eq('trip_id',id).eq('status','confirmé')
+  ]);
+  if(!t)return;
+  const isMine=t.driver_id===CU.id;
+  const isJoined=pax.some(p=>p.passenger_id===CU.id);
+  const myPax=pax.find(p=>p.passenger_id===CU.id);
+  const canJoin=t.status==='ouvert'&&!isMine&&!isJoined&&(t.seats_available??0)>0;
+
+  // Helper : affiche le badge de statut paiement + barre de progression
+  function payFlow(p){
+    const s1=p.debited, s2=p.driver_confirmed, s3=p.paid;
+    return `<div class="pay-flow">
+      <span class="pay-step ${s1?'done':'active'}">💳 ${s1?'Débité':'En attente débit'}</span>
+      <span class="pay-arrow">›</span>
+      <span class="pay-step ${s2?'done':s1?'active':'pending'}">🧑 ${s2?'Conducteur ✓':'Attente conducteur'}</span>
+      <span class="pay-arrow">›</span>
+      <span class="pay-step ${s3?'done':s2?'active':'pending'}">🏛 ${s3?'Admin validé':'Attente admin'}</span>
+    </div>`;
+  }
+
+  document.getElementById('tdTitle').textContent=t.origin+' → '+t.destination;
+  document.getElementById('tdBody').innerHTML=`
+    <div class="trip-meta" style="margin-bottom:1rem">
+      <span class="trip-chip">📅 ${fmtDate(t.departure_date)}</span>
+      <span class="trip-chip">🕐 ${t.departure_time?.slice(0,5)}</span>
+      <span class="trip-chip">${t.vehicles?.type||''} ${t.vehicles?.name||''}</span>
+      <span class="trip-chip">📍 ${t.distance_km||'?'} km · ${t.duration_min||'?'} min</span>
+    </div>
+    <div style="display:flex;gap:1.5rem;margin-bottom:1rem;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <div class="av-md">${t.profiles?.avatar||'🧑'}</div>
+        <div><div class="lbl">Conducteur</div><div style="font-weight:600">Apt. ${t.profiles?.apt||'?'} — ${t.profiles?.full_name||'?'}</div></div>
+      </div>
+      <div><div class="lbl">Coût total trajet</div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem">${fmt(t.cost_total||0)} $ CA</div></div>
+      <div><div class="lbl">Part par personne</div><div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--accent)">${fmt(t.cost_per_passenger||0)} $ CA</div></div>
+    </div>
+    ${renderSeatsLine(t.vehicles?.seats||4,t.seats_children||0,pax.length)}
+
+    <div class="lbl" style="margin-top:.9rem">Passagers inscrits (${pax.length})</div>
+    ${pax.length===0?'<p class="text-muted" style="margin-top:.4rem">Aucun passager pour l\'instant.</p>':
+      pax.map(p=>`<div style="border:1.5px solid var(--border);border-radius:10px;padding:.75rem 1rem;margin-top:.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <div class="av-sm">${p.profiles?.avatar||'🧑'}</div>
+            <span style="font-weight:600;font-size:.88rem">Apt. ${p.profiles?.apt||'?'} — ${p.profiles?.full_name||'?'}</span>
+          </div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem">${fmt(p.amount_due||0)} $ CA</div>
+        </div>
+        ${isMine?`<div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">Solde actuel : <strong style="color:${(p.profiles?.balance||0)>=0?'var(--accent)':'var(--rouge)'}">${fmt(p.profiles?.balance||0)} $ CA</strong></div>`:''}
+        ${payFlow(p)}
+        ${isMine&&p.debited&&!p.driver_confirmed?`<button class="btn btn-amber btn-sm" style="margin-top:.5rem" onclick="driverConfirm('${p.id}')">✓ Confirmer réception</button>`:''}
+        ${isMine&&p.driver_confirmed&&!p.paid?`<span style="font-size:.78rem;color:var(--muted)">En attente de validation admin</span>`:''}
+        ${p.paid?`<span class="pay-done" style="margin-top:.3rem;display:inline-block">✅ Paiement complété</span>`:''}
+      </div>`).join('')}
+
+    ${myPax?`<div style="margin-top:1rem"><div class="lbl">Mon statut de paiement</div>${payFlow(myPax)}</div>`:''}
+    ${canJoin?`<div class="cost-preview" style="margin-top:1rem">
+      <div class="cost-row"><span>Mon solde actuel</span><span>${fmt(CP?.balance||0)} $ CA</span></div>
+      <div class="cost-row"><span>Montant débité maintenant</span><span style="color:var(--rouge)">− ${fmt(t.cost_per_passenger||0)} $ CA</span></div>
+      <div class="cost-row total"><span>Solde après inscription</span><span style="color:var(--accent)">${fmt((CP?.balance||0)-(t.cost_per_passenger||0))} $ CA</span></div>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-top:.4rem">Le conducteur confirme d'abord, puis l'admin valide le transfert définitif.</p>`:''}
+    ${t.notes?`<div style="margin-top:.75rem;background:var(--bg2);border-radius:8px;padding:.65rem .9rem;font-size:.84rem">💬 ${t.notes}</div>`:''}
+  `;
+  const acts=document.getElementById('tdActions');
+  acts.innerHTML='<button class="btn btn-ghost" onclick="closeModal(\'tripDetailModal\')">Fermer</button>';
+  if(canJoin){
+    if((CP?.balance||0)<(t.cost_per_passenger||0))
+      acts.innerHTML+='<span style="color:var(--rouge);font-size:.8rem;align-self:center">Solde insuffisant</span>';
+    else
+      acts.innerHTML+=`<button class="btn btn-green" onclick="joinTrip('${t.id}')">Rejoindre · ${fmt(t.cost_per_passenger||0)} $ CA</button>`;
+  }
+  if(isMine&&t.status==='ouvert') acts.innerHTML+=`<button class="btn btn-danger" onclick="cancelTrip('${t.id}')">Annuler le trajet</button>`;
+  document.getElementById('tripDetailModal').classList.add('open');
+}
+
+async function joinTrip(tid){
+  const {data:t}=await sb.from('trips').select('cost_per_passenger,seats_available').eq('id',tid).single();
+  if(!t||(t.seats_available??0)<=0){showToast('Plus de places disponibles',true);return;}
+  if((CP?.balance||0)<(t.cost_per_passenger||0)){showToast('Solde insuffisant',true);return;}
+  // Insérer le passager
+  const {error}=await sb.from('trip_passengers').insert({
+    trip_id:tid,passenger_id:CU.id,seats_booked:1,
+    amount_due:t.cost_per_passenger,status:'confirmé',
+    debited:false,driver_confirmed:false,paid:false
+  });
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  // Débit immédiat du passager (étape 1)
+  const {error:e2}=await sb.rpc('debit_passenger',{p_trip_id:tid,p_passenger_id:CU.id});
+  if(e2){showToast('Erreur paiement : '+e2.message,true);return;}
+  await sb.rpc('refresh_trip_costs',{p_trip_id:tid});
+  await loadProfile();updateBalanceChip();
+  closeModal('tripDetailModal');
+  showToast('✅ Inscrit ! Votre solde a été débité. En attente de confirmation du conducteur.');
+  renderTrips();renderDashboard();
+}
+
+async function cancelTrip(id){
+  if(!confirm('Annuler ce trajet ? Les passagers seront remboursés automatiquement.'))return;
+  const {data:pax}=await sb.from('trip_passengers').select('*').eq('trip_id',id).eq('status','confirmé').eq('debited',true);
+  for(const p of (pax||[])){
+    const {data:pr}=await sb.from('profiles').select('balance').eq('id',p.passenger_id).single();
+    await sb.from('profiles').update({balance:(pr?.balance||0)+p.amount_due}).eq('id',p.passenger_id);
+    await sb.from('wallet_transactions').insert({user_id:p.passenger_id,amount:p.amount_due,type:'refund',description:'Remboursement trajet annulé',trip_id:id});
+  }
+  await sb.from('trip_passengers').update({status:'annulé'}).eq('trip_id',id);
+  await sb.from('trips').update({status:'annulé'}).eq('id',id);
+  closeModal('tripDetailModal');
+  showToast('Trajet annulé. Passagers remboursés.');
+  renderTrips();renderDashboard();
+}
+
+// Étape 2 : Conducteur confirme réception du passager
+async function driverConfirm(tripPassengerId){
+  if(!confirm('Confirmer que ce passager a bien rejoint le trajet ?'))return;
+  const {error}=await sb.rpc('driver_confirm_payment',{p_trip_passenger_id:tripPassengerId,p_driver_id:CU.id});
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  showToast('✓ Confirmation envoyée à l\'admin pour validation finale.');
+  // Recharger le détail du trajet actuel
+  const overlay=document.getElementById('tripDetailModal');
+  if(overlay.classList.contains('open')){
+    // retrouver le trip_id depuis le passager
+    const {data:tp}=await sb.from('trip_passengers').select('trip_id').eq('id',tripPassengerId).single();
+    if(tp) openTripDetail(tp.trip_id);
+  }
+}
+
+// ─── ADMIN PAYMENTS ──────────────────────────────────────────
+async function renderAdminPayments(){
+  // Paiements débités par le passager, confirmés par le conducteur, en attente de validation admin
+  const {data:pending}=await sb.from('trip_passengers')
+    .select('*,profiles!passenger_id(full_name,apt,balance,avatar),trips(origin,destination,departure_date,profiles!driver_id(full_name,apt,avatar))')
+    .eq('status','confirmé').eq('debited',true).eq('driver_confirmed',true).eq('paid',false)
+    .order('created_at');
+
+  // Aussi charger ceux en attente conducteur (debited=true, driver_confirmed=false)
+  const {data:waitDriver}=await sb.from('trip_passengers')
+    .select('*,profiles!passenger_id(full_name,apt,balance,avatar),trips(origin,destination,departure_date,profiles!driver_id(full_name,apt,avatar))')
+    .eq('status','confirmé').eq('debited',true).eq('driver_confirmed',false).eq('paid',false)
+    .order('created_at');
+
+  const allPending=[...(pending||[]),...(waitDriver||[])];
+  const badge=document.getElementById('pendingPayBadge');
+  if((pending||[]).length>0){badge.textContent=(pending||[]).length;badge.style.display='inline';}
+  else badge.style.display='none';
+
+  const tb=document.getElementById('adminPayBody');
+  if(!allPending.length){tb.innerHTML='<tr><td colspan="7" class="text-muted">Aucun paiement en attente.</td></tr>';return;}
+
+  tb.innerHTML=allPending.map(p=>{
+    const t=p.trips;
+    const canValidate=p.driver_confirmed&&!p.paid;
+    const stepClass=p.paid?'pay-done':p.driver_confirmed?'pay-driver':'pay-pending';
+    const stepLabel=p.paid?'✅ Validé':p.driver_confirmed?'⏳ Attente admin':'🕐 Attente conducteur';
+    return `<tr>
+      <td><div style="font-weight:600;font-size:.85rem">${t?.origin||'?'} → ${t?.destination||'?'}</div>
+          <div style="font-size:.74rem;color:var(--muted)">${t?.departure_date?fmtDate(t.departure_date):''}</div></td>
+      <td><div style="display:flex;align-items:center;gap:.4rem"><div class="av-sm">${p.profiles?.avatar||'🧑'}</div>Apt.${p.profiles?.apt||'?'} — ${p.profiles?.full_name||'?'}</div></td>
+      <td><div style="display:flex;align-items:center;gap:.4rem"><div class="av-sm">${t?.profiles?.avatar||'🧑'}</div>Apt.${t?.profiles?.apt||'?'} — ${t?.profiles?.full_name||'?'}</div></td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent)">${fmt(p.amount_due||0)} $ CA</td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;color:${(p.profiles?.balance||0)>=0?'var(--accent)':'var(--rouge)'}">${fmt(p.profiles?.balance||0)} $ CA</td>
+      <td><span class="${stepClass}">${stepLabel}</span></td>
+      <td>${canValidate?`<button class="btn btn-green btn-sm" onclick="adminValidatePayment('${p.id}')">✓ Valider</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function adminValidatePayment(tripPassengerId){
+  if(!confirm('Valider ce paiement ? Le conducteur sera crédité définitivement.'))return;
+  const {error}=await sb.rpc('admin_validate_payment',{p_trip_passenger_id:tripPassengerId});
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  showToast('✅ Paiement validé. Conducteur crédité.');
+  renderAdminPayments();renderAdmin();
+}
+
+// ─── TRIP MODAL ──────────────────────────────────────────────
+async function openTripModal(){
+  tripDistKm=null;tripDistMin=null;
+  document.getElementById('routeSelect').innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}">${r.label}</option>`).join('');
+  document.getElementById('tripVehicle').innerHTML=vehicles.filter(v=>v.status==='disponible').map(v=>`<option value="${v.id}" data-seats="${v.seats}">${v.type} ${v.name} (${v.seats} places)</option>`).join('');
+  tripVehicleSeats=parseInt(document.getElementById('tripVehicle').selectedOptions[0]?.dataset.seats)||4;
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  document.getElementById('tripDate').value=ds(tomorrow);
+  document.getElementById('tripTime').value='08:00';
+  document.getElementById('tripChildSeats').value='0';
+  document.getElementById('tripNotes').value='';
+  document.getElementById('distResult').textContent='';
+  document.getElementById('costPreview').style.display='none';
+  setRouteType('preset');
+  document.getElementById('tripModal').classList.add('open');
+}
+
+function setRouteType(type){
+  tripRouteType=type;
+  document.getElementById('presetSection').style.display=type==='preset'?'block':'none';
+  document.getElementById('customSection').style.display=type==='custom'?'block':'none';
+  document.getElementById('btnPreset').className='btn btn-sm '+(type==='preset'?'btn-green':'btn-ghost');
+  document.getElementById('btnCustom').className='btn btn-sm '+(type==='custom'?'btn-green':'btn-ghost');
+  if(type==='preset') onRouteSelect(); else {tripDistKm=null;tripDistMin=null;updateTripPreview();}
+}
+
+function onRouteSelect(){
+  const sel=document.getElementById('routeSelect').selectedOptions[0];
+  if(!sel?.value){tripDistKm=null;tripDistMin=null;updateTripPreview();return;}
+  tripDistKm=parseFloat(sel.dataset.km)||null;
+  tripDistMin=parseInt(sel.dataset.min)||null;
+  document.getElementById('distResult').textContent='';
+  updateTripPreview();
+}
+
+function onTripVehicleChange(){
+  tripVehicleSeats=parseInt(document.getElementById('tripVehicle').selectedOptions[0]?.dataset.seats)||4;
+  updateTripPreview();
+}
+
+async function calcDistance(){
+  const orig=document.getElementById('tripOrigin').value.trim();
+  const dest=document.getElementById('tripDest').value.trim();
+  if(!orig||!dest){showToast('Saisissez départ et destination',true);return;}
+  document.getElementById('distResult').textContent='Calcul en cours…';
+  // Use Google Maps Distance Matrix via a public proxy / direct API
+  // Since we may not have a Maps API key, we'll use the open OSRM API
+  try{
+    const enc=t=>encodeURIComponent(t);
+    // Geocode via Nominatim
+    const [r1,r2]=await Promise.all([
+      fetch(`https://nominatim.openstreetmap.org/search?q=${enc(orig)}&format=json&limit=1`).then(r=>r.json()),
+      fetch(`https://nominatim.openstreetmap.org/search?q=${enc(dest)}&format=json&limit=1`).then(r=>r.json())
+    ]);
+    if(!r1[0]||!r2[0]){document.getElementById('distResult').textContent='Adresse introuvable';return;}
+    const [lat1,lon1]=[r1[0].lat,r1[0].lon];
+    const [lat2,lon2]=[r2[0].lat,r2[0].lon];
+    const route=await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`).then(r=>r.json());
+    if(route.code==='Ok'){
+      tripDistKm=Math.round(route.routes[0].distance/100)/10;
+      tripDistMin=Math.round(route.routes[0].duration/60);
+      document.getElementById('distResult').textContent=`✓ ${tripDistKm} km · ${tripDistMin} min`;
+      updateTripPreview();
+    }else{document.getElementById('distResult').textContent='Calcul impossible';}
+  }catch(e){document.getElementById('distResult').textContent='Erreur réseau';}
+}
+
+function updateTripPreview(){
+  const children=parseInt(document.getElementById('tripChildSeats').value)||0;
+  const freeSeats=Math.max(0,tripVehicleSeats-children);
+  if(!tripDistKm||!tripDistMin){document.getElementById('costPreview').style.display='none';return;}
+  const total=Math.round((tarif.price_per_km*tripDistKm+tarif.price_per_min*tripDistMin)*100)/100;
+  const cpp=Math.round(total/2*100)/100; // best case: 1 passager
+  document.getElementById('costPreview').style.display='block';
+  document.getElementById('prevKm').textContent=tripDistKm+' km';
+  document.getElementById('prevMin').textContent=tripDistMin+' min';
+  document.getElementById('prevTotal').textContent=fmt(total)+' $ CA';
+  document.getElementById('prevSeats').textContent=freeSeats;
+  document.getElementById('prevDriver').textContent=fmt(cpp)+' $ CA (avec 1 passager)';
+  // Seats visual
+  let sv='<div class="seat seat-driver" title="Vous">🧑</div>';
+  for(let i=0;i<children;i++) sv+=`<div class="seat seat-child" title="Enfant">👶</div>`;
+  for(let i=0;i<freeSeats;i++) sv+=`<div class="seat seat-free" title="Place libre">○</div>`;
+  document.getElementById('seatsPreview').innerHTML=sv;
+}
+
+async function submitTrip(){
+  const date=document.getElementById('tripDate').value;
+  const time=document.getElementById('tripTime').value;
+  const vid=document.getElementById('tripVehicle').value;
+  const children=parseInt(document.getElementById('tripChildSeats').value)||0;
+  const notes=document.getElementById('tripNotes').value.trim();
+
+  let origin='',dest='',routeId=null;
+  if(tripRouteType==='preset'){
+    const sel=document.getElementById('routeSelect').selectedOptions[0];
+    if(!sel?.value){showToast('Choisissez un trajet prédéfini',true);return;}
+    routeId=sel.value;
+    origin=sel.dataset.orig;dest=sel.dataset.dest;
+    tripDistKm=parseFloat(sel.dataset.km);tripDistMin=parseInt(sel.dataset.min);
+  }else{
+    origin=document.getElementById('tripOrigin').value.trim();
+    dest=document.getElementById('tripDest').value.trim();
+    if(!origin||!dest){showToast('Saisissez départ et destination',true);return;}
+    if(!tripDistKm){showToast('Calculez la distance d\'abord',true);return;}
+  }
+  if(!date||!time||!vid){showToast('Champs requis manquants',true);return;}
+  const v=vehicles.find(x=>x.id===vid);
+  const totalSeats=(v?.seats||4)-1; // -1 pour le conducteur
+  if(children>totalSeats){showToast(`Maximum ${totalSeats} places enfants pour ce véhicule`,true);return;}
+  const costTotal=Math.round((tarif.price_per_km*tripDistKm+tarif.price_per_min*tripDistMin)*100)/100;
+  const costPP=Math.round(costTotal/1*100)/100; // sera recalculé
+
+  const btn=document.getElementById('tripSubmitBtn');btn.disabled=true;btn.textContent='Publication…';
+  const {data,error}=await sb.from('trips').insert({
+    driver_id:CU.id,vehicle_id:vid,route_id:routeId,
+    origin,destination:dest,departure_date:date,departure_time:time,
+    distance_km:tripDistKm,duration_min:tripDistMin,
+    total_seats:totalSeats,seats_children:children,
+    seats_available:totalSeats-children,
+    price_per_km:tarif.price_per_km,price_per_min:tarif.price_per_min,
+    cost_total:costTotal,cost_per_passenger:costPP,
+    status:'ouvert',notes
+  }).select().single();
+  btn.disabled=false;btn.textContent='Publier le trajet';
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  closeModal('tripModal');
+  showToast('🚗 Trajet publié !');
+  renderTrips();renderDashboard();
+}
+
+// ─── VEHICLES ────────────────────────────────────────────────
+async function renderVehicles(){
+  await loadVehicles();
+  const {data:resas}=await sb.from('reservations').select('vehicle_id').eq('status','confirmée');
+  const cm={};(resas||[]).forEach(r=>{cm[r.vehicle_id]=(cm[r.vehicle_id]||0)+1;});
+  document.getElementById('vehicleGrid').innerHTML=vehicles.map(v=>{
+    const cls=v.status==='disponible'?'sp-dispo':v.status==='maintenance'?'sp-maintenance':'sp-reserve';
+    const lbl=v.status==='disponible'?'Disponible':v.status==='maintenance'?'En maintenance':'Réservé';
+    return `<div class="vehicle-card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:.6rem"><span style="font-size:2.6rem">${v.type}</span><span class="spill ${cls}"><span class="sp-dot"></span>${lbl}</span></div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;margin-bottom:.2rem">${v.name}</div>
+      <div style="background:var(--noir);color:white;display:inline-block;padding:.12rem .55rem;border-radius:4px;font-size:.73rem;font-weight:700;letter-spacing:.08em;margin-bottom:.5rem">${v.plate}</div>
+      <div class="text-muted" style="font-size:.8rem;margin-bottom:.3rem">${v.info||''}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-bottom:${CP?.role==='admin'?'.9rem':'0'}">🪑 ${v.seats} places passagers · ${cm[v.id]||0} réservation(s)</div>
+      ${CP?.role==='admin'?`<div style="display:flex;gap:.45rem;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="openVehicleModal('${v.id}')">Modifier</button>
+        <button class="btn ${v.status==='maintenance'?'btn-green':'btn-ghost'} btn-sm" onclick="toggleMaintenance('${v.id}','${v.status}')">${v.status==='maintenance'?'Remettre en service':'Maintenance'}</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+let editVid=null;
+function openVehicleModal(id){
+  editVid=id||null;
+  const v=id?vehicles.find(x=>x.id===id):null;
+  document.getElementById('vehicleModalTitle').textContent=v?'Modifier le véhicule':'Ajouter un véhicule';
+  document.getElementById('vName').value=v?.name||'';document.getElementById('vPlate').value=v?.plate||'';
+  document.getElementById('vType').value=v?.type||'🚗';document.getElementById('vSeats').value=v?.seats||4;
+  document.getElementById('vInfo').value=v?.info||'';
+  document.getElementById('vehicleModal').classList.add('open');
+}
+async function saveVehicle(){
+  const name=document.getElementById('vName').value.trim(),plate=document.getElementById('vPlate').value.trim().toUpperCase();
+  if(!name||!plate){showToast('Champs requis',true);return;}
+  const d={name,plate,type:document.getElementById('vType').value,seats:parseInt(document.getElementById('vSeats').value)||4,info:document.getElementById('vInfo').value.trim()};
+  const {error}=editVid?await sb.from('vehicles').update(d).eq('id',editVid):await sb.from('vehicles').insert(d);
+  if(error){showToast('Erreur',true);return;}
+  closeModal('vehicleModal');showToast(editVid?'Véhicule modifié':'Véhicule ajouté');
+  await loadVehicles();renderVehicles();
+}
+async function toggleMaintenance(id,cur){
+  await sb.from('vehicles').update({status:cur==='maintenance'?'disponible':'maintenance'}).eq('id',id);
+  showToast(cur==='maintenance'?'Remis en service':'Mis en maintenance');await loadVehicles();renderVehicles();
+}
+
+// ─── WALLET ──────────────────────────────────────────────────
+async function renderWallet(){
+  await loadProfile();updateBalanceChip();
+  document.getElementById('walletAmount').textContent=fmt(CP?.balance||0)+' $ CA';
+  const {data:tx}=await sb.from('wallet_transactions').select('*').eq('user_id',CU.id).order('created_at',{ascending:false}).limit(20);
+  const list=document.getElementById('txList');
+  if(!tx?.length){list.innerHTML='<p class="text-muted">Aucune transaction.</p>';return;}
+  list.innerHTML=tx.map(t=>{
+    const credit=t.amount>0;
+    return `<div class="tx-row">
+      <div class="tx-icon ${credit?'tx-credit':'tx-debit'}">${credit?'↑':'↓'}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:.86rem;font-weight:500">${t.description||t.type}</div>
+        <div style="font-size:.74rem;color:var(--muted)">${new Date(t.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+      <div class="tx-amount" style="color:${credit?'var(--accent)':'var(--rouge)'}">${credit?'+':''}${fmt(t.amount)} $ CA</div>
+    </div>`;
+  }).join('');
+  if(CP?.role==='admin'){
+    document.getElementById('walletAdminSection').style.display='block';
+    const {data:profiles}=await sb.from('profiles').select('id,full_name,apt,balance').order('apt');
+    document.getElementById('creditUserId').innerHTML=(profiles||[]).map(p=>`<option value="${p.id}">Apt.${p.apt} — ${p.full_name} (${fmt(p.balance||0)} $ CA)</option>`).join('');
+  }
+}
+async function adminCredit(){
+  const uid=document.getElementById('creditUserId').value;
+  const amt=parseFloat(document.getElementById('creditAmount').value);
+  const desc=document.getElementById('creditDesc').value||'Crédit administrateur';
+  if(!uid||!amt||amt<=0){showToast('Montant invalide',true);return;}
+  const {error}=await sb.rpc('admin_credit_wallet',{p_user_id:uid,p_amount:amt,p_desc:desc});
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  showToast(`✅ ${fmt(amt)} $ CA crédités`);document.getElementById('creditAmount').value='';
+  renderWallet();
+}
+
+// ─── USERS ───────────────────────────────────────────────────
+async function renderUsers(){
+  const [{data:profiles},{data:resas}]=await Promise.all([
+    sb.from('profiles').select('*').order('apt'),
+    sb.from('reservations').select('user_id').eq('status','confirmée')
+  ]);
+  const cm={};(resas||[]).forEach(r=>{cm[r.user_id]=(cm[r.user_id]||0)+1;});
+  const tb=document.getElementById('usersBody');
+  if(!profiles?.length){tb.innerHTML='<tr><td colspan="8" class="text-muted">Aucun résident.</td></tr>';return;}
+  tb.innerHTML=profiles.map(p=>`<tr>
+    <td><strong>${p.apt||'?'}</strong></td>
+    <td><div style="display:flex;align-items:center;gap:.5rem"><div class="av-sm">${p.avatar||'🧑'}</div>${p.full_name||'—'}</div></td>
+    <td style="font-size:.78rem;color:var(--muted)">${p.email||'—'}</td>
+    <td><span class="badge ${p.role==='admin'?'bg-amber':'bg-blue'}">${p.role}</span></td>
+    <td style="font-family:'Syne',sans-serif;font-weight:700">${fmt(p.balance||0)} $ CA</td>
+    <td>${cm[p.id]||0}</td>
+    <td><span class="badge ${p.active?'bg-green':'bg-red'}">${p.active?'Actif':'Inactif'}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="toggleUser('${p.id}',${p.active})">${p.active?'Désactiver':'Activer'}</button></td>
+  </tr>`).join('');
+}
+function openUserModal(){['uApt','uName','uEmail','uPass'].forEach(id=>document.getElementById(id).value='');document.getElementById('uRole').value='resident';document.getElementById('userModal').classList.add('open');}
+async function saveUser(){
+  const apt=document.getElementById('uApt').value.trim(),name=document.getElementById('uName').value.trim();
+  const email=document.getElementById('uEmail').value.trim(),pass=document.getElementById('uPass').value;
+  if(!apt||!name||!email||!pass){showToast('Tous les champs requis',true);return;}
+  if(pass.length<8){showToast('Mot de passe : 8 car. min.',true);return;}
+  const {error}=await sb.rpc('create_resident',{p_email:email,p_password:pass,p_apt:apt,p_full_name:name,p_role:document.getElementById('uRole').value});
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  closeModal('userModal');showToast('Compte créé pour '+name);renderUsers();
+}
+async function toggleUser(id,cur){await sb.from('profiles').update({active:!cur}).eq('id',id);renderUsers();}
+
+// ─── ADMIN ───────────────────────────────────────────────────
+async function renderAdmin(){
+  renderAdminPayments();
+  // Tarifs
+  const {data:t}=await sb.from('tarifs').select('*').limit(1).single();
+  if(t){document.getElementById('adminPriceKm').value=t.price_per_km;document.getElementById('adminPriceMin').value=t.price_per_min;}
+  // Routes
+  const {data:r}=await sb.from('predefined_routes').select('*').order('label');
+  const tb=document.getElementById('routesBody');
+  const tcost=(km,min)=>fmt(Math.round((tarif.price_per_km*km+tarif.price_per_min*min)*100)/100);
+  tb.innerHTML=(r||[]).map(x=>`<tr>
+    <td>${x.label}</td><td>${x.origin}</td><td>${x.destination}</td>
+    <td>${x.distance_km} km</td><td>${x.duration_min} min</td>
+    <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--accent)">${tcost(x.distance_km,x.duration_min)} $ CA</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteRoute('${x.id}')">Supprimer</button></td>
+  </tr>`).join('');
+  // All reservations
+  const {data:resas}=await sb.from('reservations').select('*,vehicles(name,type),profiles(full_name,apt)').order('date',{ascending:false}).limit(50);
+  document.getElementById('adminResaBody').innerHTML=(resas||[]).map(r2=>`<tr>
+    <td>${fmtDate(r2.date)}</td><td>Apt.${r2.profiles?.apt||'?'} ${r2.profiles?.full_name||''}</td>
+    <td>${r2.vehicles?.type||''} ${r2.vehicles?.name||''}</td>
+    <td>${r2.slot}h</td><td>${r2.duration}h</td><td>${r2.motif||'—'}</td>
+    <td><span class="badge ${r2.status==='confirmée'?'bg-green':'bg-red'}">${r2.status}</span></td>
+    <td>${r2.status==='confirmée'?`<button class="btn btn-danger btn-sm" onclick="adminCancelResa('${r2.id}')">Annuler</button>`:''}</td>
+  </tr>`).join('');
+  // All trips
+  const {data:trips}=await sb.from('trips').select('*,profiles!driver_id(full_name,apt),vehicles(name,type)').order('departure_date',{ascending:false}).limit(50);
+  document.getElementById('adminTripsBody').innerHTML=(trips||[]).map(t2=>{
+    const cls=t2.status==='ouvert'?'bg-green':t2.status==='complet'?'bg-amber':'bg-red';
+    return `<tr>
+      <td>${fmtDate(t2.departure_date)}</td><td>Apt.${t2.profiles?.apt||'?'}</td>
+      <td>${t2.origin} → ${t2.destination}</td><td>${t2.departure_time?.slice(0,5)}</td>
+      <td>${t2.seats_available??'?'}/${t2.total_seats}</td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700">${fmt(t2.cost_per_passenger||0)} $ CA</td>
+      <td><span class="badge ${cls}">${t2.status}</span></td>
+      <td>${t2.status==='ouvert'?`<button class="btn btn-danger btn-sm" onclick="cancelTrip('${t2.id}')">Annuler</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+async function saveTarifs(){
+  const km=parseFloat(document.getElementById('adminPriceKm').value);
+  const min=parseFloat(document.getElementById('adminPriceMin').value);
+  if(isNaN(km)||isNaN(min)){showToast('Valeurs invalides',true);return;}
+  const {data:t}=await sb.from('tarifs').select('id').limit(1).single();
+  await sb.from('tarifs').update({price_per_km:km,price_per_min:min,updated_at:new Date().toISOString(),updated_by:CU.id}).eq('id',t.id);
+  await loadTarif();
+  const s=document.getElementById('tarifSaved');s.style.display='inline';
+  setTimeout(()=>s.style.display='none',2500);
+  showToast('Tarifs enregistrés');
+}
+function openRouteModal(){['rLabel','rOrigin','rDest','rKm','rMin'].forEach(id=>document.getElementById(id).value='');document.getElementById('routeModal').classList.add('open');}
+async function saveRoute(){
+  const label=document.getElementById('rLabel').value.trim(),orig=document.getElementById('rOrigin').value.trim(),dest=document.getElementById('rDest').value.trim();
+  const km=parseFloat(document.getElementById('rKm').value),min=parseInt(document.getElementById('rMin').value);
+  if(!label||!orig||!dest||!km||!min){showToast('Tous les champs requis',true);return;}
+  await sb.from('predefined_routes').insert({label,origin:orig,destination:dest,distance_km:km,duration_min:min});
+  closeModal('routeModal');showToast('Trajet ajouté');await loadRoutes();renderAdmin();
+}
+async function deleteRoute(id){if(!confirm('Supprimer ce trajet prédéfini ?'))return;await sb.from('predefined_routes').update({active:false}).eq('id',id);await loadRoutes();renderAdmin();}
+async function adminCancelResa(id){if(!confirm('Annuler cette réservation ?'))return;await sb.from('reservations').update({status:'annulée'}).eq('id',id);renderAdmin();}
+
+// ─── PROFILE ─────────────────────────────────────────────────
+function renderProfile(){
+  const av=CP?.avatar||'🧑';
+  selectedAvatar=av;
+  document.getElementById('profileAvatarPreview').textContent=av;
+  document.getElementById('profileName').textContent=CP?.full_name||'—';
+  document.getElementById('profileApt').textContent='Appartement '+( CP?.apt||'?');
+  document.getElementById('piApt').textContent=CP?.apt||'?';
+  document.getElementById('piName').textContent=CP?.full_name||'?';
+  document.getElementById('piEmail').textContent=CP?.email||CU?.email||'?';
+  document.getElementById('piRole').textContent=CP?.role||'?';
+  document.getElementById('piBalance').textContent=fmt(CP?.balance||0)+' $ CA';
+  // Build avatar grid
+  document.getElementById('avatarGrid').innerHTML=AVATARS.map(e=>`
+    <div class="av-opt ${e===selectedAvatar?'picked':''}" onclick="pickAvatar('${e}')" title="${e}">${e}</div>
+  `).join('');
+}
+
+function pickAvatar(emoji){
+  selectedAvatar=emoji;
+  document.getElementById('profileAvatarPreview').textContent=emoji;
+  document.querySelectorAll('.av-opt').forEach(el=>{
+    el.classList.toggle('picked', el.textContent===emoji);
+  });
+}
+
+async function saveAvatar(){
+  const {error}=await sb.from('profiles').update({avatar:selectedAvatar}).eq('id',CU.id);
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  CP.avatar=selectedAvatar;
+  updateAvatarEverywhere();
+  showToast('✅ Avatar mis à jour !');
+}
+
+async function changePassword(){
+  const p1=document.getElementById('newPass').value;
+  const p2=document.getElementById('newPass2').value;
+  if(!p1||p1.length<8){showToast('Minimum 8 caractères',true);return;}
+  if(p1!==p2){showToast('Les mots de passe ne correspondent pas',true);return;}
+  const {error}=await sb.auth.updateUser({password:p1});
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  document.getElementById('newPass').value='';
+  document.getElementById('newPass2').value='';
+  showToast('✅ Mot de passe mis à jour !');
+}
+
+// ─── UTILS ───────────────────────────────────────────────────
+function ds(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function fmtDate(d){const[y,m,day]=d.split('-');return new Date(y,m-1,day).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});}
+function fmt(n){return Number(n).toLocaleString('fr-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+let ttimer;
+function showToast(msg,isErr=false){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.className='toast'+(isErr?' err':'');t.classList.add('show');
+  clearTimeout(ttimer);ttimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
