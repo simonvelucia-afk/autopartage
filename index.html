@@ -1609,10 +1609,14 @@ async function adminCredit(){
 
 // ─── USERS ───────────────────────────────────────────────────
 async function renderUsers(){
-  const [{data:profiles},{data:resas}]=await Promise.all([
+    const [{data:profiles, error:perr},{data:resas, error:rerr}] = await Promise.all([
     sb.from('profiles').select('*').order('apt'),
     sb.from('reservations').select('user_id').eq('status','confirmée')
   ]);
+
+  if(perr){ showToast('Erreur profils (RLS?) : ' + perr.message, true); return; }
+  if(rerr){ showToast('Erreur réservations : ' + rerr.message, true); return; }
+  
   const cm={};(resas||[]).forEach(r=>{cm[r.user_id]=(cm[r.user_id]||0)+1;});
   const tb=document.getElementById('usersBody');
   if(!profiles?.length){tb.innerHTML='<tr><td colspan="8" class="text-muted">Aucun résident.</td></tr>';return;}
