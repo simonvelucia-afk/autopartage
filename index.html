@@ -799,6 +799,36 @@ async function doDemo(){
   demoMode=true;
 }
 function showErr2(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
+
+function showDemoBlock(action){
+  // Créer une modale légère d'information démo
+  const existing=document.getElementById('demoBlockModal');
+  if(existing) existing.remove();
+  const m=document.createElement('div');
+  m.id='demoBlockModal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(26,23,20,.6);backdrop-filter:blur(4px);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem';
+  m.innerHTML=`
+    <div style="background:white;border-radius:16px;padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(26,23,20,.2)">
+      <div style="font-size:3rem;margin-bottom:.75rem">🎮</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.2rem;margin-bottom:.5rem">Mode essai</div>
+      <p style="font-size:.87rem;color:#7a7368;line-height:1.6;margin-bottom:1.25rem">
+        <strong>${action.charAt(0).toUpperCase()+action.slice(1)}</strong> est désactivé en mode essai.<br>
+        Connectez-vous avec un vrai compte résident pour accéder à toutes les fonctionnalités.
+      </p>
+      <div style="display:flex;gap:.6rem;justify-content:center">
+        <button onclick="document.getElementById('demoBlockModal').remove()" 
+          style="padding:.55rem 1.2rem;border-radius:8px;border:1.5px solid #ccc8be;background:white;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
+          Continuer l'essai
+        </button>
+        <button onclick="document.getElementById('demoBlockModal').remove();doLogout()"
+          style="padding:.55rem 1.2rem;border-radius:8px;border:none;background:#2d5a3d;color:white;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer">
+          Se connecter
+        </button>
+      </div>
+    </div>`;
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+  document.body.appendChild(m);
+}
 async function doLogout(){await sb.auth.signOut();}
 
 // ─── NAV ─────────────────────────────────────────────────────
@@ -923,6 +953,7 @@ async function renderSlots(){
 }
 function selectSlot(h){selectedSlot=h;document.getElementById('confirmBtn').disabled=false;renderSlots();}
 async function confirmReservation(){
+  if(demoMode){showDemoBlock('la réservation de véhicules');return;}
   if(!selectedDate||selectedSlot===null)return;
   const vid=document.getElementById('vehicleSelect').value;
   const dur=parseInt(document.getElementById('durationSel').value);
@@ -1107,6 +1138,7 @@ async function openTripDetail(id){
 }
 
 async function joinTrip(tid){
+  if(demoMode){showDemoBlock('le paiement et l\'inscription aux trajets');return;}
   const {data:t}=await sb.from('trips').select('cost_per_passenger,seats_available').eq('id',tid).single();
   if(!t||(t.seats_available??0)<=0){showToast('Plus de places disponibles',true);return;}
   if((CP?.balance||0)<(t.cost_per_passenger||0)){showToast('Solde insuffisant',true);return;}
