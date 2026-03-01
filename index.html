@@ -42,7 +42,12 @@ body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--t
 .login-right{flex:1;display:flex;align-items:center;justify-content:flex-start;position:relative;z-index:1;padding:4rem 2rem 4rem 3rem}
 .login-visual{width:512px;height:512px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7rem;position:relative}
 .login-visual::before{content:'';position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(193,127,62,.12)}
-@media(max-width:768px){.login-right{display:none}.login-left{max-width:100%}}
+@media(max-width:768px){
+  .login-right{display:none}
+  .login-left{max-width:100%;padding:2rem 1.25rem}
+  .login-brand{font-size:2rem}
+  .login-deco{display:none}
+}
 
 /* FORMS */
 .form-group{margin-bottom:1.1rem}
