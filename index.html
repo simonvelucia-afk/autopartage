@@ -685,8 +685,13 @@ async function bootstrap(){
 }
 async function loadProfile(){
   const {data,error}=await sb.from('profiles').select('*').eq('id',CU.id).single();
-  if(data) CP=data;
-  console.log('Profil chargé:', CP);
+  if(error) console.error('Erreur profil:', error);
+  if(data){
+    CP=data;
+    CP.email=CU.email;
+  } else {
+    CP={id:CU.id, email:CU.email, full_name:'', apt:'', role:'resident', balance:0, avatar:'🧑'};
+  }
 }
 async function loadVehicles(){
   const {data}=await sb.from('vehicles').select('*').order('name');
