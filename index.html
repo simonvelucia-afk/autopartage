@@ -1,6 +1,29 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
+<script>
+/* Debug helper: log any fetch that returns 500+ with URL + response body (best-effort). */
+(function(){
+  const _fetch = window.fetch;
+  window.fetch = async function(input, init){
+    const url = (typeof input === 'string') ? input : (input && input.url) || String(input);
+    try{
+      const res = await _fetch(input, init);
+      if(res && res.status >= 500){
+        let body = '';
+        try{ body = await res.clone().text(); }catch(e){}
+        console.error('[fetch][HTTP ' + res.status + ']', url, {init, body});
+      }
+      return res;
+    }catch(err){
+      console.error('[fetch][ERROR]', url, err);
+      throw err;
+    }
+  };
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>AutoPartage — Résidence</title>
