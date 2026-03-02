@@ -448,7 +448,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <!-- ── DASHBOARD ── -->
   <div class="page active" id="page-dashboard">
     <div class="page-header">
-      <div><div class="page-title">Tableau de bord</div><div class="page-sub" id="dashDate"></div></div>
+      <div><div class="page-title">Tableau de bord</div><div class="page-sub" id="dashDate"></div><div class="page-sub" id="dashResidence" style="opacity:.95"></div></div>
     </div>
     <div class="stats-row" id="statsRow"></div>
     <div class="grid-2">
@@ -636,6 +636,21 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <div class="page" id="page-admin">
     <div class="page-header"><div><div class="page-title">Administration</div><div class="page-sub">Vue globale — réservations, trajets, tarifs</div></div></div>
 
+    <!-- Adresse de résidence -->
+    <div class="card mb-3" id="residenceAdminCard">
+      <div class="card-label">Adresse de la résidence</div>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.9rem">Visible pour tous les résidents. Modifiable uniquement par un administrateur.</p>
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Adresse</label>
+        <input type="text" id="adminResidenceAddress" class="inp" placeholder="1234 rue Exemple, Montréal, QC">
+      </div>
+      <div style="margin-top:.85rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <button class="btn btn-amber" onclick="saveResidenceAddress()">Enregistrer</button>
+        <span id="residenceSaved" style="color:var(--accent);font-size:.8rem;display:none">✓ Enregistré</span>
+      </div>
+    </div>
+
+
     <!-- Tarifs -->
     <div class="card mb-3">
       <div class="card-label">Tarification globale (valeur par défaut)</div>
@@ -739,6 +754,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
     <div id="presetSection">
       <div class="form-group"><label class="lbl">Trajet prédéfini</label><select id="routeSelect" class="inp" onchange="onRouteSelect()"><option value="">Choisir…</option></select></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:-.25rem;margin-bottom:.25rem">
+        <span style="font-size:.74rem;color:var(--muted)">Vous ne trouvez pas le bon trajet ?</span>
+        <button class="btn btn-ghost btn-sm" onclick="openRouteModalFromTrip()">+ Ajouter un trajet</button>
+      </div>
     </div>
     <div id="customSection" style="display:none">
       <div class="form-group"><label class="lbl">Point de départ</label><input type="text" id="tripOrigin" class="inp" placeholder="15 rue de la Paix, Paris"></div>
@@ -844,6 +863,7 @@ function showPage2(name){
 
 // ─── STATE ──────────────────────────────────────────────────
 let CU=null, CP=null, vehicles=[], routes=[], tarif={price_per_km:.18,price_per_min:.05};
+let residenceSettings={address:''};
 let calDate=new Date(), selectedDate=null, selectedSlot=null;
 let tripRouteType='preset', tripDistKm=null, tripDistMin=null, tripVehicleSeats=4;
 let demoMode=false;
@@ -861,7 +881,7 @@ async function init(){
   });
 }
 async function bootstrap(){
-  await Promise.all([loadProfile(),loadVehicles(),loadRoutes(),loadTarif()]);
+  await Promise.all([loadProfile(),loadVehicles(),loadRoutes(),loadTarif(),loadResidenceSettings()]);
 }
 async function loadProfile(){
   const {data, error} = await sb.from('profiles').select('*').eq('id', CU.id).maybeSingle();
@@ -895,6 +915,44 @@ async function loadTarif(){
   if(data) tarif=data;
 }
 
+async function loadResidenceSettings(){
+  // Table attendue: residence_settings (1 ligne), colonnes: address, updated_at, updated_by
+  try{
+    const {data, error} = await sb.from('residence_settings').select('*').limit(1).maybeSingle();
+    if(error){ return; }
+    residenceSettings = data || {address:''};
+  }catch(e){
+    // ignore in demo / if table not created yet
+  }
+}
+
+function renderResidenceAddress(){
+  const el=document.getElementById('dashResidence');
+  if(!el) return;
+  const addr=(residenceSettings?.address||'').trim();
+  el.textContent = addr ? ('📍 ' + addr) : '📍 Adresse de résidence non définie';
+}
+
+async function saveResidenceAddress(){
+  if((CP?.role||'').toLowerCase()!=='admin'){ showToast('Accès refusé', true); return; }
+  const addr=(document.getElementById('adminResidenceAddress')?.value||'').trim();
+  if(!addr){ showToast('Adresse requise', true); return; }
+  const payload={address:addr, updated_at:new Date().toISOString(), updated_by:CU?.id};
+  try{
+    const {data:row} = await sb.from('residence_settings').select('id').limit(1).maybeSingle();
+    const {error} = row?.id
+      ? await sb.from('residence_settings').update(payload).eq('id', row.id)
+      : await sb.from('residence_settings').insert(payload);
+    if(error){ showToast('Erreur : '+error.message, true); return; }
+  }catch(e){
+    showToast('Erreur : '+(e?.message||e), true); return;
+  }
+  await loadResidenceSettings();
+  renderResidenceAddress();
+  const s=document.getElementById('residenceSaved'); if(s){ s.style.display='inline'; setTimeout(()=>s.style.display='none',2500); }
+  showToast('Adresse enregistrée');
+}
+
 function showApp(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appShell').style.display='block';
@@ -903,6 +961,12 @@ function showApp(){
   selectedAvatar=CP?.avatar||'🧑';
   updateAvatarEverywhere();
   updateBalanceChip();
+  // Adresse de résidence
+  renderResidenceAddress();
+  if((CP?.role||'').toLowerCase()==='admin'){
+    const a=document.getElementById('adminResidenceAddress');
+    if(a) a.value = residenceSettings?.address||'';
+  }
   // Bandeau / statut mode essai
   // IMPORTANT: le mode essai doit s'activer UNIQUEMENT pour le compte démo,
   // et se désactiver automatiquement pour tout vrai résident/admin.
@@ -930,6 +994,9 @@ if(isAdmin){
 } else {
   console.log('[ui] Admin OFF', { role: CP?.role, is_admin: CP?.is_admin, isAdmin: CP?.isAdmin, profileLoaded: !!CP });
 }
+  // Masquer le panneau adresse pour les non-admin
+  const rac=document.getElementById('residenceAdminCard');
+  if(rac) rac.style.display=((CP?.role||'').toLowerCase()==='admin')?'block':'none';
   renderDashboard();
 }
 
@@ -1423,9 +1490,25 @@ async function adminValidatePayment(tripPassengerId){
 }
 
 // ─── TRIP MODAL ──────────────────────────────────────────────
+
+function refreshRouteSelect(){
+  const sel=document.getElementById('routeSelect');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}">${r.label}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+function openRouteModalFromTrip(){
+  openRouteModal();
+  // Pré-remplir l'origine avec l'adresse de résidence si elle est définie
+  const addr=(residenceSettings?.address||'').trim();
+  if(addr && document.getElementById('rOrigin')) document.getElementById('rOrigin').value=addr;
+}
+
 async function openTripModal(){
   tripDistKm=null;tripDistMin=null;
-  document.getElementById('routeSelect').innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}">${r.label}</option>`).join('');
+  refreshRouteSelect();
   document.getElementById('tripVehicle').innerHTML=vehicles.filter(v=>v.status==='disponible').map(v=>`<option value="${v.id}" data-seats="${v.seats}">${v.type} ${v.name} (${v.seats} places) · ${fmt(v.price_per_km||0.18)}$/km</option>`).join('');
   onTripVehicleChange();
   const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
@@ -1769,6 +1852,8 @@ async function toggleUser(id,cur){await sb.from('profiles').update({active:!cur}
 // ─── ADMIN ───────────────────────────────────────────────────
 async function renderAdmin(){
   renderAdminPayments();
+  // Adresse résidence
+  try{ const a=document.getElementById('adminResidenceAddress'); if(a) a.value=residenceSettings?.address||''; }catch(e){}
   // Tarifs
   const {data:t}=await sb.from('tarifs').select('*').limit(1).single();
   if(t){document.getElementById('adminPriceKm').value=t.price_per_km;document.getElementById('adminPriceMin').value=t.price_per_min;}
@@ -1817,12 +1902,22 @@ async function saveTarifs(){
   showToast('Tarifs enregistrés');
 }
 function openRouteModal(){['rLabel','rOrigin','rDest','rKm','rMin'].forEach(id=>document.getElementById(id).value='');document.getElementById('routeModal').classList.add('open');}
+
 async function saveRoute(){
   const label=document.getElementById('rLabel').value.trim(),orig=document.getElementById('rOrigin').value.trim(),dest=document.getElementById('rDest').value.trim();
   const km=parseFloat(document.getElementById('rKm').value),min=parseInt(document.getElementById('rMin').value);
   if(!label||!orig||!dest||!km||!min){showToast('Tous les champs requis',true);return;}
-  await sb.from('predefined_routes').insert({label,origin:orig,destination:dest,distance_km:km,duration_min:min});
-  closeModal('routeModal');showToast('Trajet ajouté');await loadRoutes();renderAdmin();
+  const payload={label,origin:orig,destination:dest,distance_km:km,duration_min:min,active:true,created_by:CU?.id};
+  const {error}=await sb.from('predefined_routes').insert(payload);
+  if(error){showToast('Erreur : '+error.message,true);return;}
+  closeModal('routeModal');
+  showToast('Trajet ajouté');
+  await loadRoutes();
+  // Mettre à jour la liste dans la modale "Proposer un trajet" si elle est ouverte
+  try{
+    if(document.getElementById('tripModal')?.classList.contains('open')) refreshRouteSelect();
+  }catch(e){}
+  if((CP?.role||'').toLowerCase()==='admin') renderAdmin();
 }
 async function deleteRoute(id){if(!confirm('Supprimer ce trajet prédéfini ?'))return;await sb.from('predefined_routes').update({active:false}).eq('id',id);await loadRoutes();renderAdmin();}
 async function adminCancelResa(id){if(!confirm('Annuler cette réservation ?'))return;await sb.from('reservations').update({status:'annulée'}).eq('id',id);renderAdmin();}
