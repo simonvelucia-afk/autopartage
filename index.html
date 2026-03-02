@@ -297,6 +297,12 @@ tr:hover td{background:rgba(0,0,0,.015)}
   .balance-chip{display:none}
   .btn-logout{display:none}
 }
+
+/* Simple table styling (admin stats) */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;min-width:520px}
+.tbl th,.tbl td{padding:.55rem .6rem;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:top}
+.tbl th{font-size:.78rem;color:var(--muted);text-align:left;font-weight:700}
+.tbl td{font-size:.86rem}
 </style>
 <script>
   // iOS Safari: stabilise 100vh (address bar) using CSS var --vh
@@ -454,7 +460,20 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="grid-2">
       <div class="card"><div class="card-label">Prochains trajets covoiturage</div><div id="upcomingTrips"></div></div>
       <div class="card"><div class="card-label">Disponibilité véhicules aujourd'hui</div><div id="todayAvail"></div></div>
+  
+    <!-- ── ADMIN: Statistiques trajets (Aller/Retour) ── -->
+    <div id="adminStatsWrap" style="display:none;margin-top:1rem">
+      <div class="card">
+        <div class="card-label" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem">
+          <span>📈 Statistiques trajets (admin)</span>
+          <button class="btn btn-ghost btn-sm" onclick="renderAdminTripStats(true)">Rafraîchir</button>
+        </div>
+        <div id="adminStatsInner">
+          <p class="text-muted">Chargement…</p>
+        </div>
+      </div>
     </div>
+  </div>
   </div>
 
   <!-- ── AUTO-PARTAGE ── -->
@@ -754,6 +773,11 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
     <div id="presetSection">
       <div class="form-group"><label class="lbl">Trajet prédéfini</label><select id="routeSelect" class="inp" onchange="onRouteSelect()"><option value="">Choisir…</option></select></div>
+      <div id="dirWrap" style="display:none;gap:.75rem;align-items:center;margin-top:.25rem">
+        <span class="lbl" style="margin:0">Direction</span>
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.92rem"><input type="radio" name="tripDir" value="out" checked> Aller</label>
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.92rem"><input type="radio" name="tripDir" value="return"> Retour</label>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:-.25rem;margin-bottom:.25rem">
         <span style="font-size:.74rem;color:var(--muted)">Vous ne trouvez pas le bon trajet ?</span>
         <button class="btn btn-ghost btn-sm" onclick="openRouteModalFromTrip()">+ Ajouter un trajet</button>
@@ -978,6 +1002,7 @@ const isAdmin = (
   CP?.is_admin === true ||
   CP?.isAdmin === true
 );
+window.IS_ADMIN = !!isAdmin;
 
 // Reset visibilité par défaut
 ['navUsers','navAdmin','mobNavUsers','mobNavAdmin','addVehicleBtn','bmUsers','bmAdmin'].forEach(id=>{
@@ -1144,6 +1169,148 @@ async function renderDashboard(){
     </div>`;
   }).join('');
 }
+
+// ─── ADMIN STATS (Trajets Aller/Retour) ───────────────────────
+async function renderAdminTripStats(force=false){
+  const wrap=document.getElementById('adminStatsWrap');
+  const inner=document.getElementById('adminStatsInner');
+  if(!wrap||!inner) return;
+  if(!window.IS_ADMIN){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+
+  // Simple cache to avoid refetch on every tiny UI refresh
+  const now=Date.now();
+  if(!force && window.__adminTripStatsCache && (now - window.__adminTripStatsCache.ts) < 60_000){
+    inner.innerHTML = window.__adminTripStatsCache.html;
+    return;
+  }
+
+  inner.innerHTML = '<p class="text-muted">Chargement des statistiques…</p>';
+
+  try{
+    const today=new Date();
+    const start30=new Date(today.getTime() - 30*24*60*60*1000);
+    const start90=new Date(today.getTime() - 90*24*60*60*1000);
+    const d30=ds(start30);
+    const d90=ds(start90);
+
+    // Counts (all-time & last 30 days) by direction
+    const baseCount = () => sb.from('trips').select('id', {count:'exact', head:true});
+    const [allTotal, allOut, allRet, m30Total, m30Out, m30Ret] = await Promise.all([
+      baseCount(),
+      baseCount().eq('direction','out'),
+      baseCount().eq('direction','return'),
+      baseCount().gte('departure_date', d30),
+      baseCount().eq('direction','out').gte('departure_date', d30),
+      baseCount().eq('direction','return').gte('departure_date', d30),
+    ]);
+
+    const cAll = allTotal.count ?? 0;
+    const cAllOut = allOut.count ?? 0;
+    const cAllRet = allRet.count ?? 0;
+    const c30 = m30Total.count ?? 0;
+    const c30Out = m30Out.count ?? 0;
+    const c30Ret = m30Ret.count ?? 0;
+
+    // Top routes (last 90 days) — aggregate client-side for simplicity
+    const {data:rows90, error:e90} = await sb.from('trips')
+      .select('route_id,direction,departure_date')
+      .gte('departure_date', d90)
+      .limit(5000);
+    if(e90) throw e90;
+
+    const agg = new Map(); // route_id -> {out, return, total}
+    (rows90||[]).forEach(r=>{
+      const rid=r.route_id || 'unknown';
+      const cur=agg.get(rid) || {out:0, return:0, total:0};
+      const dir = (r.direction||'out');
+      if(dir==='return') cur.return++; else cur.out++;
+      cur.total++;
+      agg.set(rid, cur);
+    });
+
+    // Fetch route labels for ids
+    const routeIds=[...agg.keys()].filter(x=>x && x!=='unknown');
+    let routeMap=new Map();
+    if(routeIds.length){
+      const {data:routes, error:er} = await sb.from('predefined_routes')
+        .select('id,label,origin,destination')
+        .in('id', routeIds);
+      if(er) throw er;
+      (routes||[]).forEach(rt=>routeMap.set(rt.id, rt));
+    }
+
+    // Sort top 8
+    const top = [...agg.entries()]
+      .filter(([rid])=>rid!=='unknown')
+      .sort((a,b)=> (b[1].total - a[1].total))
+      .slice(0,8);
+
+    const topRows = top.map(([rid, v])=>{
+      const rt = routeMap.get(rid);
+      const name = rt?.label || (rt ? `${rt.origin} → ${rt.destination}` : rid);
+      return {name, ...v};
+    });
+
+    const pct = (n, d) => d ? Math.round((n/d)*100) : 0;
+
+    const html = `
+      <div class="grid-2" style="margin-top:.35rem">
+        <div class="stat-card sc-blue">
+          <div class="stat-val">${cAll}</div>
+          <div class="stat-label">Trajets total (tous)</div>
+          <div class="text-muted" style="margin-top:.35rem;font-size:.78rem">Aller: ${cAllOut} (${pct(cAllOut,cAll)}%) · Retour: ${cAllRet} (${pct(cAllRet,cAll)}%)</div>
+        </div>
+        <div class="stat-card sc-green">
+          <div class="stat-val">${c30}</div>
+          <div class="stat-label">30 derniers jours</div>
+          <div class="text-muted" style="margin-top:.35rem;font-size:.78rem">Aller: ${c30Out} (${pct(c30Out,c30)}%) · Retour: ${c30Ret} (${pct(c30Ret,c30)}%)</div>
+        </div>
+      </div>
+
+      <div class="divider" style="margin:.85rem 0"></div>
+
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:700">Top trajets (90 jours)</div>
+          <div class="text-muted" style="font-size:.78rem">Basé sur ${rows90?.length||0} trajet(s) depuis le ${fmtDate(d90)}.</div>
+        </div>
+      </div>
+
+      ${topRows.length?`
+      <div style="margin-top:.55rem;overflow:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Trajet</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">Aller</th>
+              <th style="text-align:right">Retour</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${topRows.map(r=>`
+              <tr>
+                <td style="max-width:520px"><div style="font-weight:600">${esc(r.name)}</div></td>
+                <td style="text-align:right">${r.total}</td>
+                <td style="text-align:right">${r.out}</td>
+                <td style="text-align:right">${r.return}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      `:`<p class="text-muted" style="margin-top:.35rem">Pas assez de données sur les 90 derniers jours.</p>`}
+    `;
+
+    inner.innerHTML = html;
+    window.__adminTripStatsCache = {ts: now, html};
+  }catch(err){
+    console.error(err);
+    inner.innerHTML = '<p class="text-muted">Impossible de charger les statistiques. Vérifie les droits RLS sur <b>trips</b> et <b>predefined_routes</b>.</p>';
+  }
+}
+
 
 // ─── AUTO-PARTAGE ─────────────────────────────────────────────
 function renderCalendar(){renderCalGrid();populateVehicleSel();renderMyResa();}
@@ -1495,7 +1662,7 @@ function refreshRouteSelect(){
   const sel=document.getElementById('routeSelect');
   if(!sel) return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}">${r.label}</option>`).join('');
+  sel.innerHTML='<option value="">Choisir…</option>'+routes.map(r=>`<option value="${r.id}" data-km="${r.distance_km}" data-min="${r.duration_min}" data-orig="${r.origin}" data-dest="${r.destination}" data-ret="${r.allow_return}">${r.label}</option>`).join('');
   if(cur) sel.value=cur;
 }
 
@@ -1533,6 +1700,15 @@ function setRouteType(type){
 
 function onRouteSelect(){
   const sel=document.getElementById('routeSelect').selectedOptions[0];
+  const dirWrap=document.getElementById('dirWrap');
+  // Reset direction UI
+  if(dirWrap){
+    const allow = (sel?.dataset?.ret === 'true' || sel?.dataset?.ret === 't' || sel?.dataset?.ret === '1');
+    dirWrap.style.display = (sel?.value && allow) ? 'flex' : 'none';
+    // Default to Aller when changing route
+    const out = dirWrap.querySelector('input[name="tripDir"][value="out"]');
+    if(out) out.checked = true;
+  }
   if(!sel?.value){tripDistKm=null;tripDistMin=null;updateTripPreview();return;}
   tripDistKm=parseFloat(sel.dataset.km)||null;
   tripDistMin=parseInt(sel.dataset.min)||null;
@@ -1612,8 +1788,15 @@ async function submitTrip(){
     if(!sel?.value){showToast('Choisissez un trajet prédéfini',true);return;}
     routeId=sel.value;
     origin=sel.dataset.orig;dest=sel.dataset.dest;
+    // Direction (Aller/Retour) pour les trajets prédéfinis
+    let dir='out';
+    const dirSel=document.querySelector('input[name="tripDir"]:checked');
+    const allow = (sel?.dataset?.ret === 'true' || sel?.dataset?.ret === 't' || sel?.dataset?.ret === '1');
+    if(allow && dirSel?.value==='return'){ dir='return'; [origin,dest]=[dest,origin]; }
+    window.__tripDir = dir; // used below for insert
     tripDistKm=parseFloat(sel.dataset.km);tripDistMin=parseInt(sel.dataset.min);
   }else{
+    window.__tripDir = 'out';
     origin=document.getElementById('tripOrigin').value.trim();
     dest=document.getElementById('tripDest').value.trim();
     if(!origin||!dest){showToast('Saisissez départ et destination',true);return;}
@@ -1635,6 +1818,7 @@ async function submitTrip(){
     seats_available:totalSeats-children,
     price_per_km:tarif.price_per_km,price_per_min:tarif.price_per_min,
     cost_total:costTotal,cost_per_passenger:costPP,
+    direction:(window.__tripDir||'out'),
     status:'ouvert',notes
   }).select().single();
   btn.disabled=false;btn.textContent='Publier le trajet';
@@ -1642,6 +1826,7 @@ async function submitTrip(){
   closeModal('tripModal');
   showToast('🚗 Trajet publié !');
   renderTrips();renderDashboard();
+  renderAdminTripStats();
 }
 
 // ─── VEHICLES ────────────────────────────────────────────────
@@ -1970,6 +2155,7 @@ async function changePassword(){
 
 // ─── UTILS ───────────────────────────────────────────────────
 function ds(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function esc(s){return String(s??'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));}
 function fmtDate(d){const[y,m,day]=d.split('-');return new Date(y,m-1,day).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});}
 function fmt(n){return Number(n).toLocaleString('fr-CA',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
