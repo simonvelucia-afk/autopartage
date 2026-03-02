@@ -857,7 +857,7 @@ async function init(){
   document.getElementById('loadingScreen').style.display='none';
   sb.auth.onAuthStateChange(async(ev,s)=>{
     if(ev==='SIGNED_IN'&&s){CU=s.user;await bootstrap();showApp();}
-    else if(ev==='SIGNED_OUT') showLogin();
+    else if(ev==='SIGNED_OUT'){ demoMode=false; try{document.getElementById('demoBanner').style.display='none';}catch(e){}; showLogin(); }
   });
 }
 async function bootstrap(){
@@ -903,11 +903,11 @@ function showApp(){
   selectedAvatar=CP?.avatar||'🧑';
   updateAvatarEverywhere();
   updateBalanceChip();
-  // Bandeau démo
-  if(demoMode||CP?.email==='demo.resident@autopartage.local'){
-    document.getElementById('demoBanner').style.display='block';
-    demoMode=true;
-  }
+  // Bandeau / statut mode essai
+  // IMPORTANT: le mode essai doit s'activer UNIQUEMENT pour le compte démo,
+  // et se désactiver automatiquement pour tout vrai résident/admin.
+  demoMode = (CP?.email === 'demo.resident@autopartage.local') || (CU?.email === 'demo.resident@autopartage.local');
+  document.getElementById('demoBanner').style.display = demoMode ? 'block' : 'none';
   // Détection admin (robuste)
 const isAdmin = (
   (CP?.role && String(CP.role).toLowerCase() === 'admin') ||
@@ -1011,7 +1011,7 @@ function showDemoBlock(action){
   m.addEventListener('click',e=>{if(e.target===m)m.remove();});
   document.body.appendChild(m);
 }
-async function doLogout(){await sb.auth.signOut();}
+async function doLogout(){ demoMode=false; try{document.getElementById('demoBanner').style.display='none';}catch(e){}; await sb.auth.signOut(); }
 
 // ─── NAV ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1135,7 +1135,10 @@ async function renderSlots(){
 }
 function selectSlot(h){selectedSlot=h;document.getElementById('confirmBtn').disabled=false;renderSlots();}
 async function confirmReservation(){
-  if(demoMode){showDemoBlock('la réservation de véhicules');return;}
+  // Bloquer la réservation uniquement en mode essai (compte démo)
+  const isDemoAccount = (CP?.email === 'demo.resident@autopartage.local') || (CU?.email === 'demo.resident@autopartage.local');
+  if(demoMode && isDemoAccount){ showDemoBlock('la réservation de véhicules'); return; }
+
   if(!selectedDate||selectedSlot===null)return;
   const vid=document.getElementById('vehicleSelect').value;
   const dur=parseInt(document.getElementById('durationSel').value);
