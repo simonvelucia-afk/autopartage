@@ -761,7 +761,7 @@ async function loadAvailableVehicles(){
   const date=document.getElementById('resaDate').value;
   const {data:busy}=await _sb.from('reservations').select('vehicle_id').eq('date',date).eq('start_time',SEL_SLOT.start).neq('status','cancelled');
   const busyIds=(busy||[]).map(r=>r.vehicle_id);
-  const {data:vehs}=await _sb.from('vehicles').select('*').eq('status','available').order('name');
+  const {data:vehs}=await _sb.from('vehicles').select('*').order('name');
   const avail=(vehs||[]).filter(v=>!busyIds.includes(v.id));
   const wrap=document.getElementById('vehicleList');
   if(!avail.length){ wrap.innerHTML='<p class="text-muted">Aucun véhicule disponible pour ce créneau.</p>'; document.getElementById('vehicleWrap').style.display='block'; document.getElementById('btnConfirmResa').style.display='none'; return; }
@@ -1250,11 +1250,12 @@ async function cancelTrip(id){
 
 async function openTripModal(){
   if(demoMode){ showDemoBlock("la proposition de trajets"); return; }
-  var r = await _sb.from("vehicles").select("*").eq("status","available").order("name");
+  var r = await _sb.from("vehicles").select("*").order("name");
   var veh = r.data || [];
-  document.getElementById("tripVehicleSelect").innerHTML = veh.map(function(v){
-    return "<option value='" + v.id + "'>" + v.name + " (" + (v.seats||4) + " places)</option>";
-  }).join("");
+  document.getElementById("tripVehicleSelect").innerHTML = veh && veh.length ? veh.map(function(v){
+    var dispo = v.status === 'disponible' || v.status === 'available' || !v.status;
+    return "<option value='" + v.id + "'" + (dispo ? "" : " disabled") + ">" + v.name + " (" + (v.seats||4) + " places)" + (dispo ? "" : " — indisponible") + "</option>";
+  }).join("") : "<option value=''>Aucun véhicule trouvé</option>";
   var tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   document.getElementById("tripDate").value = tomorrow.toISOString().slice(0,10);
