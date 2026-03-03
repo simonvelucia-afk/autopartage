@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Modulimo — Réservations</title>
+<title>Modulimo — Réservations v9</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><div style=\'font-size:2rem;margin-bottom:1rem\'>⚠️</div><p style=\'font-weight:700;margin-bottom:.5rem\'>Pas de connexion internet</p><p style=\'color:#7a7368;font-size:.88rem\'>La librairie Supabase ne peut pas se charger.<br>Connectez-vous à internet et rechargez la page.</p></div>'"></script>
 <style>
@@ -230,6 +230,15 @@ select.inp option{background:white}
       </div>
       <button class="btn btn-green btn-full" onclick="signIn()">Se connecter</button>
       <p id="loginErr" style="color:var(--rouge);font-size:.8rem;margin-top:.75rem;display:none"></p>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-top:1.1rem">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+        <span style="color:rgba(255,255,255,.3);font-size:.72rem">ou</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,.1)"></div>
+      </div>
+      <button id="demoBtn" onclick="doDemo()" style="margin-top:.85rem;width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem 1.3rem;border-radius:8px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.75);font-family:'Instrument Sans',sans-serif;font-size:.85rem;font-weight:500;cursor:pointer">
+        🎮 Faire un essai
+      </button>
+      <p style="color:rgba(255,255,255,.22);font-size:.7rem;margin-top:.5rem;text-align:center">Mode exploration · aucune donnée réelle modifiée</p>
     </div>
   </div>
   <div class="login-right">
@@ -242,6 +251,9 @@ select.inp option{background:white}
 
 <!-- APP -->
 <div id="appScreen" style="display:none">
+  <div id="demoBanner" style="display:none;background:linear-gradient(90deg,#c17f3e,#a96e32);color:white;text-align:center;padding:.45rem 1rem;font-size:.8rem;font-weight:600;letter-spacing:.03em;position:sticky;top:60px;z-index:99">
+    🎮 MODE ESSAI — Vous explorez la plateforme en tant que résident virtuel · <span style="opacity:.8;font-weight:400">Les données peuvent être réinitialisées à tout moment</span>
+  </div>
   <div class="topbar">
     <div class="logo">
       <a href="https://www.modulimo.com" target="_blank" rel="noopener" style="display:flex;align-items:center;text-decoration:none">
@@ -252,6 +264,7 @@ select.inp option{background:white}
       <button onclick="showPage('dashboard')" id="nav-dashboard">📊 Tableau</button>
       <button onclick="showPage('reservations')" id="nav-reservations">📅 Réservations</button>
       <button onclick="showPage('mes-resa')" id="nav-mes-resa">🗂 Mes réservations</button>
+      <button onclick="showPage('covoiturage')" id="nav-covoiturage">🤝 Covoiturage</button>
       <button onclick="showPage('admin')" id="nav-admin" style="display:none">⚙️ Admin</button>
     </nav>
     <div class="topbar-right">
@@ -274,6 +287,7 @@ select.inp option{background:white}
         <button onclick="bmGo('dashboard')">📊 Tableau</button>
         <button onclick="bmGo('reservations')">📅 Réserver</button>
         <button onclick="bmGo('mes-resa')">🗂 Mes réservations</button>
+        <button onclick="bmGo('covoiturage')">🤝 Covoiturage</button>
         <button id="bmAdmin" style="display:none" onclick="bmGo('admin')">⚙️ Admin</button>
         <button class="bm-danger" onclick="doLogout()">🚪 Quitter</button>
       </div>
@@ -415,6 +429,38 @@ select.inp option{background:white}
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
+  <!-- PAGE COVOITURAGE -->
+  <div class="page" id="page-covoiturage">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Covoiturage</h1>
+        <p class="page-sub">Proposez ou rejoignez un trajet avec un vehicule de la residence</p>
+      </div>
+      <button class="btn btn-green" onclick="openTripModal()">+ Proposer un trajet</button>
+    </div>
+    <div class="card mb-2" style="padding:.9rem 1.2rem">
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:160px">
+          <label class="lbl">Date</label>
+          <input type="date" id="tripFilterDate" class="inp" onchange="renderTrips()">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label class="lbl">Statut</label>
+          <select id="tripFilterStatus" class="inp" onchange="renderTrips()">
+            <option value="ouvert">Ouverts</option>
+            <option value="">Tous</option>
+            <option value="complet">Complets</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="renderTrips()">Actualiser</button>
+      </div>
+    </div>
+    <div id="tripsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem"></div>
+    <p id="tripsEmpty" class="text-muted" style="display:none;text-align:center;padding:2rem">
+      Aucun trajet disponible. Soyez le premier a en proposer un !
+    </p>
+  </div>
+
   <!-- PAGE ADMIN -->
   <!-- ═══════════════════════════════════════════════════ -->
   <div class="page" id="page-admin">
@@ -465,6 +511,58 @@ select.inp option{background:white}
   </div>
 </div>
 
+<!-- Modal : Proposer un trajet -->
+<div class="overlay" id="tripModal">
+  <div class="modal">
+    <div class="modal-title">Proposer un trajet</div>
+    <div class="form-group">
+      <label class="lbl">Point de depart</label>
+      <input type="text" id="tripOrigin" class="inp" placeholder="Ex: Residence Les Erables">
+    </div>
+    <div class="form-group">
+      <label class="lbl">Destination</label>
+      <input type="text" id="tripDest" class="inp" placeholder="Ex: Centre-ville, Gare...">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Date</label>
+        <input type="date" id="tripDate" class="inp">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="lbl">Heure</label>
+        <input type="time" id="tripTime" class="inp" step="60">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Vehicule</label>
+      <select id="tripVehicleSelect" class="inp"></select>
+    </div>
+    <div class="form-group">
+      <label class="lbl">Places passagers disponibles</label>
+      <input type="number" id="tripSeats" class="inp" value="3" min="1" max="8">
+    </div>
+    <div class="form-group">
+      <label class="lbl">Notes (optionnel)</label>
+      <input type="text" id="tripNotes" class="inp" placeholder="Bagages ok, animaux ok...">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('tripModal')">Annuler</button>
+      <button class="btn btn-green" onclick="submitTrip()">Publier le trajet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Detail d'un trajet -->
+<div class="overlay" id="tripDetailModal">
+  <div class="modal">
+    <div class="modal-title" id="tdTitle">Detail du trajet</div>
+    <div id="tdBody" style="margin-bottom:1rem"></div>
+    <div class="modal-actions" id="tdActions">
+      <button class="btn btn-ghost" onclick="closeOverlay('tripDetailModal')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -487,6 +585,7 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 ═══════════════════════════════════════════════════════════ */
 let CU = null;       // current user
 let PROF = null;     // profile row
+let demoMode = false;
 let SLOTS = [];      // creneaux du jour
 let SEL_SLOT = null;
 let SEL_RETURN = null;
@@ -516,6 +615,7 @@ function showPage(p){
   if(nb) nb.classList.add('active');
   if(p==='dashboard') loadDashboard();
   if(p==='mes-resa') loadMyReservations();
+  if(p==='covoiturage'){ renderTrips(); }
   if(p==='admin'){ const today=todayStr(); document.getElementById('adminDate').value=today; loadAdminTrips(); loadAdminPaxAll(); loadAdminStats(); }
 }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -572,6 +672,7 @@ async function initApp(user){
     document.getElementById('bmAdmin').style.display='';
   }
   document.getElementById('loginScreen').style.display='none';
+  if(demoMode){ document.getElementById('demoBanner').style.display='block'; }
   document.getElementById('appScreen').style.display='block';
   document.getElementById('resaDate').value=todayStr();
   document.getElementById('paxDate').value=todayStr();
@@ -766,6 +867,8 @@ async function findTrip(){
   document.getElementById('paxAddressForm').style.display='block';
 }
 async function submitPassengerRequest(){
+  if(demoMode){ showDemoBlock("les demandes passager"); return; }
+  if(demoMode){ showDemoBlock('les demandes passager'); return; }
   if(!FOUND_TRIP){ toast('Aucun trajet sélectionné.',true); return; }
   const pickup=document.getElementById('paxPickup').value.trim();
   const dropoff=document.getElementById('paxDropoff').value.trim();
@@ -952,6 +1055,249 @@ async function loadAdminPaxAll(){
         <button class="btn btn-danger btn-sm" onclick="adminRespondPax('${p.id}','rejected')">Refuser</button>
       </div>`:''}
     </div>`).join('');
+}
+
+
+// ─── MODE DEMO ──────────────────────────────────────────────────────────────
+async function doDemo(){
+  var btn = document.getElementById("demoBtn");
+  btn.disabled = true; btn.textContent = "Chargement...";
+  var result = await _sb.auth.signInWithPassword({
+    email: "demo.resident@autopartage.local",
+    password: "Demo1234!"
+  });
+  if(result.error){
+    btn.disabled = false; btn.innerHTML = "🎮 Faire un essai";
+    toast("Compte demo non configure. Contactez l'administrateur.", "err");
+    return;
+  }
+  demoMode = true;
+  btn.disabled = false; btn.innerHTML = "🎮 Faire un essai";
+}
+
+function showDemoBlock(action){
+  var existing = document.getElementById("demoBlockModal");
+  if(existing) existing.remove();
+  var overlay = document.createElement("div");
+  overlay.id = "demoBlockModal";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(26,23,20,.6);backdrop-filter:blur(4px);z-index:300;display:flex;align-items:center;justify-content:center;padding:1rem";
+
+  var box = document.createElement("div");
+  box.style.cssText = "background:white;border-radius:16px;padding:2rem;max-width:380px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(26,23,20,.2)";
+
+  var icon = document.createElement("div");
+  icon.style.cssText = "font-size:3rem;margin-bottom:.75rem";
+  icon.textContent = "🎮";
+
+  var title = document.createElement("div");
+  title.style.cssText = "font-family:Syne,sans-serif;font-weight:800;font-size:1.2rem;margin-bottom:.5rem";
+  title.textContent = "Mode essai";
+
+  var desc = document.createElement("p");
+  desc.style.cssText = "font-size:.87rem;color:#7a7368;line-height:1.6;margin-bottom:1.25rem";
+  desc.innerHTML = "Cette action est desactivee en mode essai.<br>Connectez-vous avec un vrai compte.";
+
+  var btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;gap:.6rem;justify-content:center";
+
+  var btn1 = document.createElement("button");
+  btn1.style.cssText = "padding:.55rem 1.2rem;border-radius:8px;border:1.5px solid #ccc8be;background:white;font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer";
+  btn1.textContent = "Continuer";
+  btn1.onclick = function(){ overlay.remove(); };
+
+  var btn2 = document.createElement("button");
+  btn2.style.cssText = "padding:.55rem 1.2rem;border-radius:8px;border:none;background:#2d5a3d;color:white;font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer";
+  btn2.textContent = "Se connecter";
+  btn2.onclick = function(){ overlay.remove(); doLogout(); };
+
+  btnRow.appendChild(btn1);
+  btnRow.appendChild(btn2);
+  box.appendChild(icon);
+  box.appendChild(title);
+  box.appendChild(desc);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  overlay.addEventListener("click", function(e){ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+
+// ─── COVOITURAGE ────────────────────────────────────────────────────────────
+var tripsList = [];
+
+async function renderTrips(){
+  var fDate = document.getElementById("tripFilterDate").value;
+  var fStat = document.getElementById("tripFilterStatus").value;
+  var grid = document.getElementById("tripsGrid");
+  var empty = document.getElementById("tripsEmpty");
+  grid.innerHTML = "<div class='spinner'></div>";
+
+  var q = _sb.from("trips")
+    .select("*,profiles(full_name,apt),vehicles(name,seats)")
+    .order("departure_date").order("departure_time");
+  if(fDate) q = q.eq("departure_date", fDate);
+  if(fStat) q = q.eq("status", fStat);
+
+  var r = await q;
+  tripsList = r.data || [];
+  empty.style.display = tripsList.length ? "none" : "block";
+
+  grid.innerHTML = tripsList.map(function(t){
+    var isMine = t.driver_id === CU.id;
+    var statusCls = t.status === "ouvert" ? "sp-ouvert" : t.status === "complet" ? "sp-complet" : "sp-annule";
+    return "<div class='trip-card' style='cursor:pointer' data-tid='" + t.id + "'  onclick='handleTripClick(event)'>"
+      + "<div class='trip-route'>"
+        + "<span class='trip-point'>" + (t.origin||"?") + "</span>"
+        + "<span style='color:var(--muted);margin:0 .4rem'>→</span>"
+        + "<span class='trip-point'>" + (t.destination||"?") + "</span>"
+      + "</div>"
+      + "<div class='trip-meta' style='margin:.5rem 0'>"
+        + "<span class='trip-chip'>📅 " + fmtDate(t.departure_date) + "</span>"
+        + "<span class='trip-chip'>🕐 " + (t.departure_time||"").slice(0,5) + "</span>"
+        + "<span class='trip-chip'>🚗 " + (t.vehicles ? t.vehicles.name : "—") + "</span>"
+      + "</div>"
+      + "<div style='display:flex;justify-content:space-between;align-items:center'>"
+        + "<span class='spill " + statusCls + "'><span class='sp-dot'></span>" + (t.status||"?") + "</span>"
+        + (isMine ? "<span class='badge bg-amber'>Mon trajet</span>" : "")
+        + "<span style='font-size:.82rem;color:var(--muted)'>" + (t.seats_available||"?") + " place(s) libre(s)</span>"
+      + "</div>"
+      + (t.notes ? "<div style='margin-top:.5rem;font-size:.78rem;color:var(--muted);background:var(--bg2);border-radius:6px;padding:.35rem .6rem'>💬 " + t.notes + "</div>" : "")
+    + "</div>";
+  }).join("");
+}
+
+async function openTripDetail(id){
+  var t = tripsList.find(function(x){ return x.id === id; });
+  if(!t){ return; }
+  var isMine = t.driver_id === CU.id;
+
+  var r2 = await _sb.from("trip_passengers")
+    .select("*,profiles(full_name,apt)")
+    .eq("trip_id", id).eq("status", "confirme");
+  var pax = r2.data || [];
+  var isJoined = pax.some(function(p){ return p.passenger_id === CU.id; });
+  var canJoin = t.status === "ouvert" && !isMine && !isJoined && (t.seats_available||0) > 0;
+
+  document.getElementById("tdTitle").textContent = (t.origin||"?") + " → " + (t.destination||"?");
+
+  var paxHtml = pax.length === 0
+    ? "<p class='text-muted'>Aucun passager pour le moment.</p>"
+    : pax.map(function(p){
+        return "<div style='border:1.5px solid var(--border);border-radius:10px;padding:.65rem .9rem;margin-top:.4rem;font-size:.85rem'>"
+          + "Apt. " + (p.profiles ? p.profiles.apt||"?" : "?") + " — " + (p.profiles ? p.profiles.full_name||"?" : "?")
+        + "</div>";
+      }).join("");
+
+  document.getElementById("tdBody").innerHTML =
+    "<div class='trip-meta' style='margin-bottom:.9rem'>"
+      + "<span class='trip-chip'>📅 " + fmtDate(t.departure_date) + "</span>"
+      + "<span class='trip-chip'>🕐 " + (t.departure_time||"").slice(0,5) + "</span>"
+      + "<span class='trip-chip'>🚗 " + (t.vehicles ? t.vehicles.name : "—") + "</span>"
+    + "</div>"
+    + "<div class='lbl'>Conducteur</div>"
+    + "<p style='margin:.3rem 0 .9rem;font-weight:600'>Apt. " + (t.profiles ? t.profiles.apt||"?" : "?") + " — " + (t.profiles ? t.profiles.full_name||"?" : "?") + "</p>"
+    + "<div class='lbl'>Passagers inscrits (" + pax.length + " / " + (t.seats_available !== undefined ? t.seats_available + pax.length : "?") + ")</div>"
+    + paxHtml
+    + (t.notes ? "<div style='margin-top:.75rem;background:var(--bg2);border-radius:8px;padding:.6rem .9rem;font-size:.84rem'>💬 " + t.notes + "</div>" : "");
+
+  var acts = document.getElementById("tdActions");
+  acts.innerHTML = "";
+  var _btnClose = document.createElement("button");
+  _btnClose.className = "btn btn-ghost";
+  _btnClose.textContent = "Fermer";
+  _btnClose.onclick = function(){ closeOverlay("tripDetailModal"); };
+  acts.appendChild(_btnClose);
+  if(canJoin){
+    var _btnJoin = document.createElement("button");
+    _btnJoin.className = "btn btn-green";
+    _btnJoin.textContent = "Rejoindre le trajet";
+    (function(tid){ _btnJoin.onclick = function(){ joinTrip(tid); }; })(t.id);
+    acts.appendChild(_btnJoin);
+  }
+  if(isMine && t.status === "ouvert"){
+    var _btnAnn = document.createElement("button");
+    _btnAnn.className = "btn btn-danger btn-sm";
+    _btnAnn.textContent = "Annuler ce trajet";
+    (function(tid){ _btnAnn.onclick = function(){ cancelTrip(tid); }; })(t.id);
+    acts.appendChild(_btnAnn);
+  }
+}
+
+async function joinTrip(tid){
+  if(demoMode){ showDemoBlock("l'inscription aux trajets"); return; }
+  var r = await _sb.from("trip_passengers").insert({
+    trip_id: tid, passenger_id: CU.id, seats_booked: 1, status: "confirme"
+  });
+  if(r.error){ toast("Erreur : " + r.error.message, "err"); return; }
+  // Decrement seats_available
+  var trip = tripsList.find(function(x){ return x.id === tid; });
+  if(trip && trip.seats_available > 0){
+    await _sb.from("trips").update({ seats_available: trip.seats_available - 1 }).eq("id", tid);
+  }
+  closeOverlay("tripDetailModal");
+  toast("Inscription confirmee !");
+  renderTrips();
+}
+
+async function cancelTrip(id){
+  if(!confirm("Annuler ce trajet ?")) return;
+  await _sb.from("trips").update({ status: "annule" }).eq("id", id);
+  closeOverlay("tripDetailModal");
+  toast("Trajet annule.");
+  renderTrips();
+}
+
+async function openTripModal(){
+  if(demoMode){ showDemoBlock("la proposition de trajets"); return; }
+  var r = await _sb.from("vehicles").select("*").eq("status","available").order("name");
+  var veh = r.data || [];
+  document.getElementById("tripVehicleSelect").innerHTML = veh.map(function(v){
+    return "<option value='" + v.id + "'>" + v.name + " (" + (v.seats||4) + " places)</option>";
+  }).join("");
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById("tripDate").value = tomorrow.toISOString().slice(0,10);
+  document.getElementById("tripTime").value = "08:00";
+  document.getElementById("tripOrigin").value = "";
+  document.getElementById("tripDest").value = "";
+  document.getElementById("tripNotes").value = "";
+  document.getElementById("tripSeats").value = "3";
+  document.getElementById("tripModal").classList.add("open");
+}
+
+async function submitTrip(){
+  var origin = document.getElementById("tripOrigin").value.trim();
+  var dest = document.getElementById("tripDest").value.trim();
+  var date = document.getElementById("tripDate").value;
+  var time = document.getElementById("tripTime").value;
+  var vid = document.getElementById("tripVehicleSelect").value;
+  var seats = parseInt(document.getElementById("tripSeats").value) || 3;
+  var notes = document.getElementById("tripNotes").value.trim();
+  if(!origin || !dest || !date || !time || !vid){ toast("Remplissez tous les champs obligatoires", "err"); return; }
+  var r = await _sb.from("trips").insert({
+    driver_id: CU.id,
+    vehicle_id: vid,
+    origin: origin,
+    destination: dest,
+    departure_date: date,
+    departure_time: time,
+    seats_available: seats,
+    notes: notes || null,
+    status: "ouvert"
+  });
+  if(r.error){ toast("Erreur : " + r.error.message, "err"); return; }
+  closeOverlay("tripModal");
+  toast("Trajet publie !");
+  renderTrips();
+}
+
+function handleTripClick(e){
+  var card = e.currentTarget;
+  openTripDetail(card.getAttribute("data-tid"));
+}
+
+function closeOverlay(id){
+  document.getElementById(id).classList.remove("open");
 }
 
 // BOOT
