@@ -5,27 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Modulimo — Réservations</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="document.getElementById('loadingScreen').innerHTML='<div style=\'text-align:center;padding:2rem\'><div style=\'font-size:2rem;margin-bottom:1rem\'>⚠️</div><p style=\'font-weight:700;margin-bottom:.5rem\'>Pas de connexion internet</p><p style=\'color:#7a7368;font-size:.88rem\'>La librairie Supabase ne peut pas se charger.<br>Connectez-vous à internet et rechargez la page.</p></div>'"></script>
-<script>
-// Filet de sécurité : si n'importe quelle erreur JS bloque le boot, on sort du spinner
-window.onerror = function(msg, src, line) {
-  var ls = document.getElementById('loadingScreen');
-  if(ls) ls.style.display = 'none';
-  var login = document.getElementById('loginScreen');
-  if(login) login.style.display = 'block';
-  if(!document.getElementById('bootErr')) {
-    var box = document.querySelector('.login-box');
-    if(box) {
-      var d = document.createElement('div');
-      d.id = 'bootErr';
-      d.style.cssText = 'background:rgba(181,57,42,.1);border:1px solid #b5392a;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#b5392a';
-      d.innerHTML = '<strong>Erreur :</strong> ' + msg + ' (ligne ' + line + ')';
-      box.prepend(d);
-    }
-  }
-};
-</script>
-<style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><div style=\'font-size:2rem;margin-bottom:1rem\'>⚠️</div><p style=\'font-weight:700;margin-bottom:.5rem\'>Pas de connexion internet</p><p style=\'color:#7a7368;font-size:.88rem\'>La librairie Supabase ne peut pas se charger.<br>Connectez-vous à internet et rechargez la page.</p></div>'"></script>
+<style><style>
 :root {
   --vh:1vh;
   --bg:#f0ede6; --bg2:#e8e4db; --noir:#1a1714; --accent:#2d5a3d; --accent2:#c17f3e;
@@ -819,7 +800,7 @@ async function loadMyReservations(){
     .select('*, reservations(date, start_time, vehicles(name,license_plate), profiles(full_name))')
     .eq('user_id',CU.id).order('created_at',{ascending:false});
   if((!resas||!resas.length)&&(!paxReqs||!paxReqs.length)){
-    el.innerHTML='<p class="text-muted">Aucune réservation pour l'instant.</p>'; return;
+    el.innerHTML='<p class="text-muted">Aucune réservation pour le moment.</p>'; return;
   }
   const resaHtml=(resas||[]).map(r=>`
     <div class="res-item" id="ri-${r.id}">
@@ -973,24 +954,43 @@ async function loadAdminPaxAll(){
     </div>`).join('');
 }
 
-/* ═══════════════════════════════════════════════════════════
-   BOOT
-═══════════════════════════════════════════════════════════ */
-(async()=>{
-  try{
-    const {data,error}=await _sb.auth.getSession();
-    if(error) throw error;
-    if(data?.session?.user){ await initApp(data.session.user); }
-    else{ document.getElementById('loginScreen').style.display='block'; }
-  } catch(e){
-    console.error('Boot error:',e);
-    document.getElementById('loginScreen').style.display='block';
-    const errBox=document.createElement('div');
-    errBox.style.cssText='background:rgba(181,57,42,.1);border:1px solid var(--rouge);border-radius:8px;padding:.75rem 1rem;margin-top:1rem;font-size:.82rem;color:var(--rouge)';
-    errBox.textContent='Erreur de connexion : '+e.message;
-    document.querySelector('.login-box')?.prepend(errBox);
-  } finally{
-    document.getElementById('loadingScreen').style.display='none';
+// BOOT
+(async function boot(){
+  var loadEl = document.getElementById("loadingScreen");
+  var loginEl = document.getElementById("loginScreen");
+
+  function showLogin(errMsg){
+    loadEl.style.display = "none";
+    loginEl.style.display = "block";
+    if(errMsg){
+      var d = document.createElement("div");
+      d.style.cssText = "background:rgba(181,57,42,.1);border:1px solid #b5392a;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#b5392a";
+      d.textContent = errMsg;
+      var box = document.querySelector(".login-box");
+      if(box) box.insertBefore(d, box.firstChild);
+    }
+  }
+
+  // Timeout de secours : si tout plante apres 6s, on affiche le login
+  var fallback = setTimeout(function(){
+    console.warn("Boot timeout");
+    showLogin("Connexion lente ou hors ligne. Veuillez reessayer.");
+  }, 6000);
+
+  try {
+    var r = await _sb.auth.getSession();
+    clearTimeout(fallback);
+    var sess = r && r.data && r.data.session;
+    if(sess && sess.user){
+      await initApp(sess.user);
+      loadEl.style.display = "none";
+    } else {
+      showLogin(null);
+    }
+  } catch(err){
+    clearTimeout(fallback);
+    console.error("Boot error:", err);
+    showLogin("Erreur : " + (err.message || String(err)));
   }
 })();
 </script>
